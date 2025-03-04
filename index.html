@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>index.html</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        #aboutButton, #licenseButton, #ownerPanelButton {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        #ownerPanelButton {
+            display: none;
+        }
+
+        #popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        #popupContent {
+            background: #333;
+            padding: 20px;
+            max-width: 600px;
+            width: 90%;
+            border-radius: 8px;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        #closeButton {
+            display: block;
+            text-align: right;
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        #ownerPanel {
+            display: none;
+            background-color: #444;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        #ownerPanel button {
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #repoFiles {
+            color: lightgray;
+            margin-top: 10px;
+        }
+
+        #contributorsList {
+            color: lightgray;
+            margin-top: 10px;
+        }
+
+        #contributorsList li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="aboutButton">ABOUT</button>
+    <button id="licenseButton">LICENSE</button>
+    <button id="ownerPanelButton">OWNER PANEL</button>
+
+    <div id="popup">
+        <div id="popupContent">
+            <div id="closeButton">X</div>
+            <h2>File Content</h2>
+            <pre id="fileContent">Loading file...</pre>
+        </div>
+    </div>
+
+    <div id="ownerPanel">
+        <h2>Owner Panel</h2>
+        <button id="showLogsButton">Show Logs</button>
+        <button id="addContributorButton">Add Contributor</button>
+        <button id="removeContributorButton">Remove Contributor</button>
+        <button id="editFileButton">Edit File</button>
+        <button id="manageRepoButton">Manage Repository</button>
+        <button id="logoutButton">Logout</button>
+
+        <div id="repoFiles">
+            <h3>Repository Files</h3>
+            <ul id="repoFileList">
+                <li>README.md</li>
+                <li>LICENSE</li>
+            </ul>
+        </div>
+
+        <div id="contributorsList">
+            <h3>Contributors</h3>
+            <ul id="contributors">
+                <li>@hgfghhccchgtjcdfhhhh</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const aboutButton = document.getElementById("aboutButton");
+        const licenseButton = document.getElementById("licenseButton");
+        const ownerPanelButton = document.getElementById("ownerPanelButton");
+        const ownerPanel = document.getElementById("ownerPanel");
+        const popup = document.getElementById("popup");
+        const closeButton = document.getElementById("closeButton");
+        const fileContent = document.getElementById("fileContent");
+
+        const ownerUsername = '@hgfghhccchgtjcdfhhhh';
+        const contributorsList = document.getElementById("contributors");
+        const repoFileList = document.getElementById("repoFileList");
+
+        let contributors = ['@hgfghhccchgtjcdfhhhh'];
+        let repoFiles = ['README.md', 'LICENSE'];
+
+        const enteredUsername = prompt("Enter username to access the Owner Panel:");
+
+        if (enteredUsername === ownerUsername) {
+            ownerPanelButton.style.display = 'inline-block';
+        }
+
+        aboutButton.addEventListener("click", function() {
+            fetch('README.md')
+                .then(response => response.text())
+                .then(data => {
+                    fileContent.textContent = data;
+                    popup.style.display = 'flex';
+                })
+                .catch(error => {
+                    fileContent.textContent = "Failed to load README.md";
+                });
+        });
+
+        licenseButton.addEventListener("click", function() {
+            fetch('LICENSE')
+                .then(response => response.text())
+                .then(data => {
+                    fileContent.textContent = data;
+                    popup.style.display = 'flex';
+                })
+                .catch(error => {
+                    fileContent.textContent = "Failed to load LICENSE file";
+                });
+        });
+
+        ownerPanelButton.addEventListener("click", function() {
+            ownerPanel.style.display = 'block';
+        });
+
+        closeButton.addEventListener("click", function() {
+            popup.style.display = 'none';
+        });
+
+        window.addEventListener("click", function(event) {
+            if (event.target === popup) {
+                popup.style.display = 'none';
+            }
+        });
+
+        const showLogsButton = document.getElementById("showLogsButton");
+        const addContributorButton = document.getElementById("addContributorButton");
+        const removeContributorButton = document.getElementById("removeContributorButton");
+        const editFileButton = document.getElementById("editFileButton");
+        const manageRepoButton = document.getElementById("manageRepoButton");
+        const logoutButton = document.getElementById("logoutButton");
+
+        showLogsButton.addEventListener("click", function() {
+            alert("Showing logs: \nLog entry 1: Owner accessed logs.\nLog entry 2: Owner changed page content.");
+        });
+
+        addContributorButton.addEventListener("click", function() {
+            const newContributor = prompt("Enter contributor username to add:");
+            if (newContributor && !contributors.includes(newContributor)) {
+                contributors.push(newContributor);
+                const li = document.createElement('li');
+                li.textContent = newContributor;
+                contributorsList.appendChild(li);
+                alert(`${newContributor} added as a contributor.`);
+            } else {
+                alert("Invalid contributor or already exists.");
+            }
+        });
+
+        removeContributorButton.addEventListener("click", function() {
+            const contributorToRemove = prompt("Enter contributor username to remove:");
+            if (contributors.includes(contributorToRemove)) {
+                contributors = contributors.filter(c => c !== contributorToRemove);
+                const li = Array.from(contributorsList.children).find(item => item.textContent === contributorToRemove);
+                if (li) li.remove();
+                alert(`${contributorToRemove} removed from contributors.`);
+            } else {
+                alert("Contributor not found.");
+            }
+        });
+
+        editFileButton.addEventListener("click", function() {
+            const fileName = prompt("Enter the file name to edit (e.g., README.md, LICENSE):");
+            if (repoFiles.includes(fileName)) {
+                const newContent = prompt(`Enter new content for ${fileName}:`);
+                alert(`${fileName} has been updated with new content.`);
+            } else {
+                alert("File not found.");
+            }
+        });
+
+        manageRepoButton.addEventListener("click", function() {
+            const newFileName = prompt("Enter a new file name to add to the repository:");
+            if (newFileName && !repoFiles.includes(newFileName)) {
+                repoFiles.push(newFileName);
+                const li = document.createElement('li');
+                li.textContent = newFileName;
+                repoFileList.appendChild(li);
+                alert(`${newFileName} added to the repository.`);
+            } else {
+                alert("File already exists or invalid name.");
+            }
+        });
+
+        logoutButton.addEventListener("click", function() {
+            ownerPanel.style.display = 'none';
+            alert("Logged out of Owner Panel.");
+        });
+    </script>
+
+</body>
+</html>
