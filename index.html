@@ -8,42 +8,76 @@
   <style>
     body {
       margin: 0;
-      font-family: 'Arial Black', sans-serif;
-      background: url('https://www.transparenttextures.com/patterns/asfalt-dark.png');
-      background-size: cover;
+      font-family: 'Arial', sans-serif;
+      background-color: black;
+      color: white;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 50px 20px;
+      padding: 20px;
+    }
+
+    .topbar {
+      width: 100%;
+      background-color: #333;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 32px;
+      font-weight: bold;
+      border-bottom: 3px solid yellow;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .topbar .title {
+      font-size: 32px;
+    }
+
+    .topbar .search-bar {
+      display: flex;
+      align-items: center;
+    }
+
+    .topbar input[type="text"] {
+      background-color: white;
+      color: black;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-left: 10px;
     }
 
     .title {
-      background: url('https://www.transparenttextures.com/patterns/black-quartz.png') no-repeat center center;
-      background-size: cover;
-      color: white;
-      padding: 40px 60px;
       font-size: 64px;
-      text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-      border-radius: 15px;
+      text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
       margin-bottom: 60px;
     }
 
     .button {
-      background: url('https://www.transparenttextures.com/patterns/black-quartz.png') no-repeat center center;
-      background-size: cover;
+      background-color: black;
       color: white;
       font-size: 28px;
       padding: 20px 50px;
       margin: 15px 0;
-      border: none;
+      border: 2px solid yellow;
       border-radius: 12px;
       cursor: pointer;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
       transition: transform 0.2s ease;
+      width: 350px;
     }
 
     .button:hover {
       transform: scale(1.05);
+      background-color: #444;
+    }
+
+    .button:active {
+      background-color: yellow;
+      color: black;
     }
 
     .hidden {
@@ -140,9 +174,47 @@
       font-size: 16px;
       margin-top: 20px;
     }
+
+    .input-field {
+      background-color: white;
+      color: black;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-top: 10px;
+      width: 300px;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: yellow;
+    }
+
+    .input-button {
+      background-color: yellow;
+      color: black;
+      padding: 10px 20px;
+      border-radius: 5px;
+      margin-top: 10px;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .input-button:hover {
+      background-color: darkgoldenrod;
+    }
   </style>
 </head>
 <body>
+  <div class="topbar">
+    <div class="title">hgland</div>
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="Search..." />
+    </div>
+  </div>
+
   <div class="title">hgland</div>
 
   <button class="button" onclick="viewFile('README.md')">About</button>
@@ -187,12 +259,27 @@
     }
 
     function showPasswordPrompt() {
-      const password = prompt("Enter the Owner Panel Password:");
-      if (password === "hgland-official$ownerpanel") {
-        document.getElementById('ownerPanel').classList.remove('hidden');
-      } else {
-        alert("Incorrect password!");
-      }
+      const passwordInput = document.createElement('input');
+      passwordInput.classList.add('input-field');
+      passwordInput.type = 'password';
+      passwordInput.placeholder = 'Enter Owner Panel Passcode';
+
+      const submitButton = document.createElement('button');
+      submitButton.classList.add('input-button');
+      submitButton.innerHTML = 'Submit';
+      submitButton.onclick = function () {
+        const password = passwordInput.value;
+        if (password === 'hgland-official$ownerpanel') {
+          document.getElementById('ownerPanel').classList.remove('hidden');
+          document.body.removeChild(passwordInput);
+          document.body.removeChild(submitButton);
+        } else {
+          alert('Incorrect passcode!');
+        }
+      };
+
+      document.body.appendChild(passwordInput);
+      document.body.appendChild(submitButton);
     }
 
     function manageFiles() {
