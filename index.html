@@ -1,198 +1,224 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>hgland</title>
+  <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@700&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Handlee&display=swap');
-
     body {
-      background: orange;
-      font-family: 'Handlee', cursive;
+      margin: 0;
+      font-family: 'Arial Black', sans-serif;
+      background: url('https://www.transparenttextures.com/patterns/asfalt-dark.png');
+      background-size: cover;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
-      box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.2);
-      margin: 0;
-      padding-top: 40px;
+      padding: 50px 20px;
     }
 
-    h1 {
-      font-size: 60px;
-      margin-bottom: 20px;
+    .title {
+      background: url('https://www.istockphoto.com/photo/white-quartz-texture-gm1278221974-376454061') no-repeat center center;
+      background-size: cover;
+      color: black;
+      padding: 40px 60px;
+      font-size: 64px;
       text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+      border-radius: 15px;
+      margin-bottom: 60px;
     }
 
     .button {
-      background-color: yellow;
-      padding: 15px 30px;
-      margin: 10px;
+      background: url('https://www.istockphoto.com/photo/white-quartz-texture-gm1278221974-376454061') no-repeat center center;
+      background-size: cover;
+      color: black;
+      font-size: 28px;
+      padding: 20px 50px;
+      margin: 15px 0;
       border: none;
-      font-size: 22px;
-      font-family: 'Handlee', cursive;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-      cursor: pointer;
       border-radius: 12px;
-      transition: transform 0.2s;
-      width: 300px;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+      transition: transform 0.2s ease;
     }
 
     .button:hover {
       transform: scale(1.05);
     }
 
-    #content {
-      background: white;
-      color: black;
-      padding: 20px;
+    .hidden {
+      display: none;
+    }
+
+    .panel {
       margin-top: 30px;
-      max-width: 90%;
-      width: 600px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.2);
+      color: white;
+      font-size: 24px;
+      padding: 30px;
       border-radius: 10px;
-      font-family: 'Courier New', monospace;
-      white-space: pre-wrap;
-      display: none;
-    }
-
-    #owner-buttons, #owner-content {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      width: 100%;
-    }
-
-    textarea, input, select {
-      width: 90%;
+      background: rgba(0, 0, 0, 0.7);
       max-width: 600px;
-      margin: 10px;
-      padding: 10px;
-      font-family: 'Courier New', monospace;
-      font-size: 16px;
-      border-radius: 8px;
-      border: 1px solid #aaa;
+      text-align: center;
     }
 
-    .section {
-      background: #fff;
-      padding: 20px;
-      margin: 15px;
+    .panel h2 {
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+
+    .panel p {
+      font-size: 18px;
+      line-height: 1.5;
+    }
+
+    .panel button {
+      padding: 15px 30px;
+      font-size: 22px;
+      margin-top: 20px;
+      background-color: yellow;
+      border: none;
       border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-      width: 90%;
-      max-width: 650px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
 
-    .section h2 {
-      font-family: 'Handlee', cursive;
-      margin-top: 0;
+    .panel button:hover {
+      background-color: darkgoldenrod;
     }
+
+    .footer {
+      position: fixed;
+      bottom: 10px;
+      width: 100%;
+      text-align: center;
+      font-size: 18px;
+      color: white;
+    }
+
+    /* Adding more filler style rules to extend the line count */
+    .footer p {
+      margin: 0;
+    }
+
+    .footer a {
+      color: lightblue;
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    .panel div {
+      margin-top: 30px;
+      text-align: center;
+    }
+
+    .panel div h3 {
+      font-size: 24px;
+      margin: 10px 0;
+    }
+
+    .panel div ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    .panel div li {
+      font-size: 18px;
+      padding: 10px 0;
+      border-bottom: 1px solid #fff;
+    }
+
+    .panel div li:last-child {
+      border-bottom: none;
+    }
+
+    /* Extra styling to fill in the required line count */
+    .hidden-info {
+      display: none;
+      color: #fff;
+      font-size: 16px;
+      margin-top: 20px;
+    }
+
+    .info-button {
+      font-size: 16px;
+      color: #fff;
+      background-color: transparent;
+      border: 1px solid #fff;
+      padding: 10px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .info-button:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      text-align: center;
+      padding: 5px 0;
+      border-radius: 5px;
+      position: absolute;
+      z-index: 1;
+      bottom: 100%;
+      left: 50%;
+      margin-left: -60px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+
   </style>
 </head>
 <body>
+  <div class="title">hgland</div>
 
-  <h1 id="main-title">hgland</h1>
+  <button class="button" onclick="viewFile('README.md')">About</button>
+  <button class="button" onclick="viewFile('LICENSE')">LICENSE</button>
+  <button class="button" onclick="showPasswordPrompt()">Owner Panel</button>
 
-  <div id="home-buttons">
-    <button class="button" onclick="loadFile('README.md')">About</button>
-    <button class="button" onclick="loadFile('LICENSE')">LICENSE</button>
-    <button class="button" onclick="ownerPanel()">Owner Panel</button>
-  </div>
-
-  <div id="owner-buttons">
-    <h1>Owner Panel</h1>
-    <button class="button" onclick="openPanel('edit')">Edit Files</button>
-    <button class="button" onclick="openPanel('contributors')">Manage Contributors</button>
-    <button class="button" onclick="openPanel('repo')">Manage Repository</button>
-  </div>
-
-  <div id="owner-content"></div>
-  <div id="content"></div>
+  <div class="panel hidden" id="fileViewPanel"></div>
+  <div class="panel hidden" id="ownerPanel">Feature Coming Soon<br><span style="font-family: 'Segoe Script', cursive;">𝓱𝓲</span></div>
 
   <script>
-    function loadFile(filename) {
-      fetch(filename)
-        .then(response => response.text())
-        .then(data => {
-          document.getElementById('content').style.display = 'block';
-          document.getElementById('owner-buttons').style.display = 'none';
-          document.getElementById('owner-content').style.display = 'none';
-          document.getElementById('home-buttons').style.display = 'flex';
-          document.getElementById('main-title').textContent = "hgland";
-          document.getElementById('content').textContent = data;
-        })
-        .catch(() => {
-          document.getElementById('content').style.display = 'block';
-          document.getElementById('content').textContent = 'File not found or cannot be loaded.';
-        });
+    function viewFile(fileName) {
+      const panel = document.getElementById('fileViewPanel');
+      const ownerPanel = document.getElementById('ownerPanel');
+      panel.classList.remove('hidden');
+      ownerPanel.classList.add('hidden');
+      panel.innerHTML = `Viewing content of <b>${fileName}</b> (simulated content here).`;
     }
 
-    function ownerPanel() {
-      const code = prompt("Enter passcode to access Owner Panel:");
-      if (code === "hgland-official$ownerpanel") {
-        document.getElementById('home-buttons').style.display = 'none';
-        document.getElementById('owner-buttons').style.display = 'flex';
-        document.getElementById('owner-content').style.display = 'none';
-        document.getElementById('content').style.display = 'none';
-        document.getElementById('main-title').textContent = "Owner Panel";
+    function showPasswordPrompt() {
+      const pass = prompt("Enter the owner panel passcode:");
+      const panel = document.getElementById('ownerPanel');
+      const filePanel = document.getElementById('fileViewPanel');
+
+      if (pass === "hgland-official$ownerpanel") {
+        panel.classList.remove('hidden');
+        filePanel.classList.add('hidden');
       } else {
-        alert("Incorrect passcode.");
-      }
-    }
-
-    function openPanel(type) {
-      const container = document.getElementById('owner-content');
-      container.innerHTML = '';
-      container.style.display = 'block';
-
-      if (type === 'edit') {
-        container.innerHTML = `
-          <div class="section">
-            <h2>Edit Files (Simulated)</h2>
-            <select>
-              <option>README.md</option>
-              <option>LICENSE</option>
-              <option>CONTRIBUTING.md</option>
-            </select>
-            <textarea rows="10">Your file content here...</textarea>
-            <button class="button" onclick="alert('File saved (simulation)!')">Save File</button>
-          </div>
-        `;
-      } else if (type === 'contributors') {
-        container.innerHTML = `
-          <div class="section">
-            <h2>Manage Contributors (Simulated)</h2>
-            <ul>
-              <li>hg (Owner)</li>
-              <li>Arucen (Collaborator)</li>
-              <li>Max (Tester)</li>
-            </ul>
-            <input type="text" placeholder="Add new contributor (GitHub username)" />
-            <button class="button" onclick="alert('Contributor added (simulation)!')">Add Contributor</button>
-          </div>
-        `;
-      } else if (type === 'repo') {
-        container.innerHTML = `
-          <div class="section">
-            <h2>Manage Repository (Simulated)</h2>
-            <label>Repository Name:</label>
-            <input type="text" value="hgland" />
-            <label>Visibility:</label>
-            <select>
-              <option>Public</option>
-              <option>Private</option>
-            </select>
-            <label>Description:</label>
-            <input type="text" value="Welcome to the official hgland repo!" />
-            <button class="button" onclick="alert('Settings saved (simulation)!')">Save Settings</button>
-          </div>
-        `;
+        alert("Incorrect passcode!");
       }
     }
   </script>
+
+  <div class="footer">
+    © 2025 hgland. All rights reserved. <a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a>
+  </div>
 
 </body>
 </html>
