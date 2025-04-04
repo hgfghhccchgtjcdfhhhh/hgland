@@ -4,23 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>hgland</title>
-  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Handlee&display=swap');
+
     body {
       background: orange;
-      font-family: 'Great Vibes', cursive;
+      font-family: 'Handlee', cursive;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       min-height: 100vh;
       box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.2);
       margin: 0;
+      padding-top: 40px;
     }
 
     h1 {
-      font-size: 70px;
-      margin-bottom: 40px;
+      font-size: 60px;
+      margin-bottom: 20px;
       text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
     }
 
@@ -29,8 +31,8 @@
       padding: 15px 30px;
       margin: 10px;
       border: none;
-      font-size: 24px;
-      font-family: 'Great Vibes', cursive;
+      font-size: 22px;
+      font-family: 'Handlee', cursive;
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
       cursor: pointer;
       border-radius: 12px;
@@ -51,15 +53,42 @@
       width: 600px;
       box-shadow: 0 0 20px rgba(0,0,0,0.2);
       border-radius: 10px;
-      display: none;
-      font-family: sans-serif;
+      font-family: 'Courier New', monospace;
       white-space: pre-wrap;
+      display: none;
     }
 
-    #owner-buttons {
+    #owner-buttons, #owner-content {
       display: none;
       flex-direction: column;
       align-items: center;
+      width: 100%;
+    }
+
+    textarea, input, select {
+      width: 90%;
+      max-width: 600px;
+      margin: 10px;
+      padding: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #aaa;
+    }
+
+    .section {
+      background: #fff;
+      padding: 20px;
+      margin: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 650px;
+    }
+
+    .section h2 {
+      font-family: 'Handlee', cursive;
+      margin-top: 0;
     }
   </style>
 </head>
@@ -75,11 +104,12 @@
 
   <div id="owner-buttons">
     <h1>Owner Panel</h1>
-    <button class="button" onclick="showFeature('Edit Files - Simulated file editor for the hgland repository.\nFeature coming soon to allow editing README.md, LICENSE, and more.')">Edit Files</button>
-    <button class="button" onclick="showFeature('Manage Contributors - Simulated contributor manager for hgland.\nFeature coming soon to add, remove, or modify contributors.')">Manage Contributors</button>
-    <button class="button" onclick="showFeature('Manage Repository - Simulated settings panel for hgland.\nFeature coming soon to change visibility, rename repo, update topics, and more.')">Manage Repository</button>
+    <button class="button" onclick="openPanel('edit')">Edit Files</button>
+    <button class="button" onclick="openPanel('contributors')">Manage Contributors</button>
+    <button class="button" onclick="openPanel('repo')">Manage Repository</button>
   </div>
 
+  <div id="owner-content"></div>
   <div id="content"></div>
 
   <script>
@@ -89,6 +119,7 @@
         .then(data => {
           document.getElementById('content').style.display = 'block';
           document.getElementById('owner-buttons').style.display = 'none';
+          document.getElementById('owner-content').style.display = 'none';
           document.getElementById('home-buttons').style.display = 'flex';
           document.getElementById('main-title').textContent = "hgland";
           document.getElementById('content').textContent = data;
@@ -104,6 +135,7 @@
       if (code === "hgland-official$ownerpanel") {
         document.getElementById('home-buttons').style.display = 'none';
         document.getElementById('owner-buttons').style.display = 'flex';
+        document.getElementById('owner-content').style.display = 'none';
         document.getElementById('content').style.display = 'none';
         document.getElementById('main-title').textContent = "Owner Panel";
       } else {
@@ -111,9 +143,54 @@
       }
     }
 
-    function showFeature(message) {
-      document.getElementById('content').style.display = 'block';
-      document.getElementById('content').textContent = message;
+    function openPanel(type) {
+      const container = document.getElementById('owner-content');
+      container.innerHTML = '';
+      container.style.display = 'block';
+
+      if (type === 'edit') {
+        container.innerHTML = `
+          <div class="section">
+            <h2>Edit Files (Simulated)</h2>
+            <select>
+              <option>README.md</option>
+              <option>LICENSE</option>
+              <option>CONTRIBUTING.md</option>
+            </select>
+            <textarea rows="10">Your file content here...</textarea>
+            <button class="button" onclick="alert('File saved (simulation)!')">Save File</button>
+          </div>
+        `;
+      } else if (type === 'contributors') {
+        container.innerHTML = `
+          <div class="section">
+            <h2>Manage Contributors (Simulated)</h2>
+            <ul>
+              <li>hg (Owner)</li>
+              <li>Arucen (Collaborator)</li>
+              <li>Max (Tester)</li>
+            </ul>
+            <input type="text" placeholder="Add new contributor (GitHub username)" />
+            <button class="button" onclick="alert('Contributor added (simulation)!')">Add Contributor</button>
+          </div>
+        `;
+      } else if (type === 'repo') {
+        container.innerHTML = `
+          <div class="section">
+            <h2>Manage Repository (Simulated)</h2>
+            <label>Repository Name:</label>
+            <input type="text" value="hgland" />
+            <label>Visibility:</label>
+            <select>
+              <option>Public</option>
+              <option>Private</option>
+            </select>
+            <label>Description:</label>
+            <input type="text" value="Welcome to the official hgland repo!" />
+            <button class="button" onclick="alert('Settings saved (simulation)!')">Save Settings</button>
+          </div>
+        `;
+      }
     }
   </script>
 
