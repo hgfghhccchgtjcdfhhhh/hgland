@@ -1,248 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>index.html</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>hgland</title>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: orange;
+      font-family: 'Great Vibes', cursive;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.2);
+      margin: 0;
+    }
 
-        #aboutButton, #licenseButton, #ownerPanelButton {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            margin-right: 10px;
-        }
+    h1 {
+      font-size: 70px;
+      margin-bottom: 40px;
+      text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    }
 
-        #ownerPanelButton {
-            display: none;
-        }
+    .button {
+      background-color: yellow;
+      padding: 15px 30px;
+      margin: 10px;
+      border: none;
+      font-size: 24px;
+      font-family: 'Great Vibes', cursive;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      border-radius: 12px;
+      transition: transform 0.2s;
+      width: 300px;
+    }
 
-        #popup {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            justify-content: center;
-            align-items: center;
-            color: white;
-        }
+    .button:hover {
+      transform: scale(1.05);
+    }
 
-        #popupContent {
-            background: #333;
-            padding: 20px;
-            max-width: 600px;
-            width: 90%;
-            border-radius: 8px;
-            overflow-y: auto;
-            max-height: 80vh;
-        }
+    #content {
+      background: white;
+      color: black;
+      padding: 20px;
+      margin-top: 30px;
+      max-width: 90%;
+      width: 600px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.2);
+      border-radius: 10px;
+      display: none;
+      font-family: sans-serif;
+      white-space: pre-wrap;
+    }
 
-        #closeButton {
-            display: block;
-            text-align: right;
-            padding: 5px;
-            cursor: pointer;
-        }
-
-        #ownerPanel {
-            display: none;
-            background-color: #444;
-            padding: 20px;
-            border-radius: 8px;
-        }
-
-        #ownerPanel button {
-            margin: 10px 0;
-            padding: 10px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        #repoFiles {
-            color: lightgray;
-            margin-top: 10px;
-        }
-
-        #contributorsList {
-            color: lightgray;
-            margin-top: 10px;
-        }
-
-        #contributorsList li {
-            margin: 5px 0;
-        }
-    </style>
+    #owner-buttons {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+  </style>
 </head>
 <body>
 
-    <button id="aboutButton">ABOUT</button>
-    <button id="licenseButton">LICENSE</button>
-    <button id="ownerPanelButton">OWNER PANEL</button>
+  <h1 id="main-title">hgland</h1>
 
-    <div id="popup">
-        <div id="popupContent">
-            <div id="closeButton">X</div>
-            <h2>File Content</h2>
-            <pre id="fileContent">Loading file...</pre>
-        </div>
-    </div>
+  <div id="home-buttons">
+    <button class="button" onclick="loadFile('README.md')">About</button>
+    <button class="button" onclick="loadFile('LICENSE')">LICENSE</button>
+    <button class="button" onclick="ownerPanel()">Owner Panel</button>
+  </div>
 
-    <div id="ownerPanel">
-        <h2>Owner Panel</h2>
-        <button id="showLogsButton">Show Logs</button>
-        <button id="addContributorButton">Add Contributor</button>
-        <button id="removeContributorButton">Remove Contributor</button>
-        <button id="editFileButton">Edit File</button>
-        <button id="manageRepoButton">Manage Repository</button>
-        <button id="logoutButton">Logout</button>
+  <div id="owner-buttons">
+    <h1>Owner Panel</h1>
+    <button class="button" onclick="showFeature('Edit Files - Simulated file editor for the hgland repository.\nFeature coming soon to allow editing README.md, LICENSE, and more.')">Edit Files</button>
+    <button class="button" onclick="showFeature('Manage Contributors - Simulated contributor manager for hgland.\nFeature coming soon to add, remove, or modify contributors.')">Manage Contributors</button>
+    <button class="button" onclick="showFeature('Manage Repository - Simulated settings panel for hgland.\nFeature coming soon to change visibility, rename repo, update topics, and more.')">Manage Repository</button>
+  </div>
 
-        <div id="repoFiles">
-            <h3>Repository Files</h3>
-            <ul id="repoFileList">
-                <li>README.md</li>
-                <li>LICENSE</li>
-            </ul>
-        </div>
+  <div id="content"></div>
 
-        <div id="contributorsList">
-            <h3>Contributors</h3>
-            <ul id="contributors">
-                <li>@hgfghhccchgtjcdfhhhh</li>
-            </ul>
-        </div>
-    </div>
-
-    <script>
-        const aboutButton = document.getElementById("aboutButton");
-        const licenseButton = document.getElementById("licenseButton");
-        const ownerPanelButton = document.getElementById("ownerPanelButton");
-        const ownerPanel = document.getElementById("ownerPanel");
-        const popup = document.getElementById("popup");
-        const closeButton = document.getElementById("closeButton");
-        const fileContent = document.getElementById("fileContent");
-
-        const ownerUsername = '@hgfghhccchgtjcdfhhhh';
-        const contributorsList = document.getElementById("contributors");
-        const repoFileList = document.getElementById("repoFileList");
-
-        let contributors = ['@hgfghhccchgtjcdfhhhh'];
-        let repoFiles = ['README.md', 'LICENSE'];
-
-        const enteredUsername = prompt("Enter username to access the Owner Panel:");
-
-        if (enteredUsername === ownerUsername) {
-            ownerPanelButton.style.display = 'inline-block';
-        }
-
-        aboutButton.addEventListener("click", function() {
-            fetch('README.md')
-                .then(response => response.text())
-                .then(data => {
-                    fileContent.textContent = data;
-                    popup.style.display = 'flex';
-                })
-                .catch(error => {
-                    fileContent.textContent = "Failed to load README.md";
-                });
+  <script>
+    function loadFile(filename) {
+      fetch(filename)
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('content').style.display = 'block';
+          document.getElementById('owner-buttons').style.display = 'none';
+          document.getElementById('home-buttons').style.display = 'flex';
+          document.getElementById('main-title').textContent = "hgland";
+          document.getElementById('content').textContent = data;
+        })
+        .catch(() => {
+          document.getElementById('content').style.display = 'block';
+          document.getElementById('content').textContent = 'File not found or cannot be loaded.';
         });
+    }
 
-        licenseButton.addEventListener("click", function() {
-            fetch('LICENSE')
-                .then(response => response.text())
-                .then(data => {
-                    fileContent.textContent = data;
-                    popup.style.display = 'flex';
-                })
-                .catch(error => {
-                    fileContent.textContent = "Failed to load LICENSE file";
-                });
-        });
+    function ownerPanel() {
+      const code = prompt("Enter passcode to access Owner Panel:");
+      if (code === "hgland-official$ownerpanel") {
+        document.getElementById('home-buttons').style.display = 'none';
+        document.getElementById('owner-buttons').style.display = 'flex';
+        document.getElementById('content').style.display = 'none';
+        document.getElementById('main-title').textContent = "Owner Panel";
+      } else {
+        alert("Incorrect passcode.");
+      }
+    }
 
-        ownerPanelButton.addEventListener("click", function() {
-            ownerPanel.style.display = 'block';
-        });
-
-        closeButton.addEventListener("click", function() {
-            popup.style.display = 'none';
-        });
-
-        window.addEventListener("click", function(event) {
-            if (event.target === popup) {
-                popup.style.display = 'none';
-            }
-        });
-
-        const showLogsButton = document.getElementById("showLogsButton");
-        const addContributorButton = document.getElementById("addContributorButton");
-        const removeContributorButton = document.getElementById("removeContributorButton");
-        const editFileButton = document.getElementById("editFileButton");
-        const manageRepoButton = document.getElementById("manageRepoButton");
-        const logoutButton = document.getElementById("logoutButton");
-
-        showLogsButton.addEventListener("click", function() {
-            alert("Showing logs: \nLog entry 1: Owner accessed logs.\nLog entry 2: Owner changed page content.");
-        });
-
-        addContributorButton.addEventListener("click", function() {
-            const newContributor = prompt("Enter contributor username to add:");
-            if (newContributor && !contributors.includes(newContributor)) {
-                contributors.push(newContributor);
-                const li = document.createElement('li');
-                li.textContent = newContributor;
-                contributorsList.appendChild(li);
-                alert(`${newContributor} added as a contributor.`);
-            } else {
-                alert("Invalid contributor or already exists.");
-            }
-        });
-
-        removeContributorButton.addEventListener("click", function() {
-            const contributorToRemove = prompt("Enter contributor username to remove:");
-            if (contributors.includes(contributorToRemove)) {
-                contributors = contributors.filter(c => c !== contributorToRemove);
-                const li = Array.from(contributorsList.children).find(item => item.textContent === contributorToRemove);
-                if (li) li.remove();
-                alert(`${contributorToRemove} removed from contributors.`);
-            } else {
-                alert("Contributor not found.");
-            }
-        });
-
-        editFileButton.addEventListener("click", function() {
-            const fileName = prompt("Enter the file name to edit (e.g., README.md, LICENSE):");
-            if (repoFiles.includes(fileName)) {
-                const newContent = prompt(`Enter new content for ${fileName}:`);
-                alert(`${fileName} has been updated with new content.`);
-            } else {
-                alert("File not found.");
-            }
-        });
-
-        manageRepoButton.addEventListener("click", function() {
-            const newFileName = prompt("Enter a new file name to add to the repository:");
-            if (newFileName && !repoFiles.includes(newFileName)) {
-                repoFiles.push(newFileName);
-                const li = document.createElement('li');
-                li.textContent = newFileName;
-                repoFileList.appendChild(li);
-                alert(`${newFileName} added to the repository.`);
-            } else {
-                alert("File already exists or invalid name.");
-            }
-        });
-
-        logoutButton.addEventListener("click", function() {
-            ownerPanel.style.display = 'none';
-            alert("Logged out of Owner Panel.");
-        });
-    </script>
+    function showFeature(message) {
+      document.getElementById('content').style.display = 'block';
+      document.getElementById('content').textContent = message;
+    }
+  </script>
 
 </body>
 </html>
