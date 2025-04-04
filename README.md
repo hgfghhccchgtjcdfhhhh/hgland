@@ -1,30 +1,16 @@
-**hi!**
-Youve come across this repo, heya there. Read this README.md file to get to know about hgland.
+# About
+- This repository is the grand code behind the hgland website. I cant buy domains for a real website but it doesnt really matter at all.
+- Just read this file for ALL Information about hgland. This is not a actual business type website this is for a community on discord (mine).
 
-# hgland
+## Links
+- **Discord Server:** https://discord.gg/4p5yh64q9d
+- **Tiktok/Socials:** https://www.tiktok.com/@ialoneamthehgone?_t=ZN-8vG1sRDfzOg&_r=1
 
-## Description
-cool community ig.
+## Privacy
+- I cant share passcodes, authenticator codes, owner codes, passwords and etc for my security.
+- I cant share my own location or private information for my security as well.
+- I cant share other peoples information for their security and im not allowed to even try to get that information.
 
-## Installation
-
-1. Clone the repository:
-    ```bash
-    git clone https://github.com/your-username/project-name.git
-    ```
-
-2. Navigate into the project folder:
-    ```bash
-    cd project-name
-    ```
-
-3. Open `index.html` in your browser or use a local server to view the project.
-
-## Usage
-Provide instructions on how to use the project.
-
-## Contributing
-If you'd like to contribute, feel free to fork the repository and submit a pull request.
-
-## License
-This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
+- This is really all information i can give.
+ 
+- ***----- hgland -----***
