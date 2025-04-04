@@ -15,6 +15,7 @@
       flex-direction: column;
       align-items: center;
       padding: 20px;
+      padding-top: 100px; /* Add padding to avoid content being hidden behind the fixed topbar */
     }
 
     .topbar {
@@ -29,6 +30,10 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 10; /* Ensure the topbar stays on top of other content */
     }
 
     .topbar .title {
@@ -48,6 +53,14 @@
       border: 1px solid #ccc;
       border-radius: 4px;
       margin-left: 10px;
+      width: 200px;
+    }
+
+    .search-icon {
+      font-size: 20px;
+      color: white;
+      margin-left: 10px;
+      cursor: pointer;
     }
 
     .title {
@@ -68,6 +81,7 @@
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
       transition: transform 0.2s ease;
       width: 350px;
+      margin-top: 80px; /* Adjust for the fixed topbar */
     }
 
     .button:hover {
@@ -212,6 +226,7 @@
     <div class="title">hgland</div>
     <div class="search-bar">
       <input type="text" id="search-input" placeholder="Search..." />
+      <span class="search-icon">🔍</span> <!-- Search icon -->
     </div>
   </div>
 
@@ -288,31 +303,4 @@
 
     function manageContributors() {
       const action = prompt("Enter 'remove' to remove a contributor, or 'view' to see current contributors:");
-      if (action.toLowerCase() === 'remove') {
-        const contributor = prompt("Enter the username of the contributor to remove:");
-        alert(`Removing contributor: ${contributor}`);
-      } else if (action.toLowerCase() === 'view') {
-        alert("Viewing current contributors...");
-      } else {
-        alert("Invalid action.");
-      }
-    }
-
-    function manageRepository() {
-      const action = prompt("Enter 'settings' to manage repository settings, or 'view' to view settings:");
-      if (action.toLowerCase() === 'settings') {
-        alert("Simulating repository settings management...");
-      } else if (action.toLowerCase() === 'view') {
-        // Instant pop-up of repository settings when 'view' is typed
-        document.getElementById('ownerPanel').classList.add('hidden');
-        const repoSettingsPanel = document.createElement('div');
-        repoSettingsPanel.classList.add('panel');
-        repoSettingsPanel.innerHTML = "<h2>Repository Settings</h2><p>Viewing and managing the settings for this repository...</p>";
-        document.body.appendChild(repoSettingsPanel);
-      } else {
-        alert("Invalid action.");
-      }
-    }
-  </script>
-</body>
-</html>
+      if (action.toLowerCase()
