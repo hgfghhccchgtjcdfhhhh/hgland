@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>hgland</title>
   <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@700&display=swap" rel="stylesheet">
   <style>
@@ -17,9 +18,9 @@
     }
 
     .title {
-      background: url('https://www.istockphoto.com/photo/white-quartz-texture-gm1278221974-376454061') no-repeat center center;
+      background: url('https://www.transparenttextures.com/patterns/black-quartz.png') no-repeat center center;
       background-size: cover;
-      color: black;
+      color: white;
       padding: 40px 60px;
       font-size: 64px;
       text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
@@ -28,9 +29,9 @@
     }
 
     .button {
-      background: url('https://www.istockphoto.com/photo/white-quartz-texture-gm1278221974-376454061') no-repeat center center;
+      background: url('https://www.transparenttextures.com/patterns/black-quartz.png') no-repeat center center;
       background-size: cover;
-      color: black;
+      color: white;
       font-size: 28px;
       padding: 20px 50px;
       margin: 15px 0;
@@ -94,53 +95,32 @@
       color: white;
     }
 
-    /* Adding more filler style rules to extend the line count */
-    .footer p {
-      margin: 0;
-    }
-
-    .footer a {
-      color: lightblue;
-      text-decoration: none;
-    }
-
-    .footer a:hover {
-      text-decoration: underline;
-    }
-
-    .panel div {
-      margin-top: 30px;
-      text-align: center;
-    }
-
-    .panel div h3 {
-      font-size: 24px;
-      margin: 10px 0;
-    }
-
-    .panel div ul {
-      list-style-type: none;
-      padding-left: 0;
-    }
-
-    .panel div li {
+    .extra-content {
       font-size: 18px;
-      padding: 10px 0;
-      border-bottom: 1px solid #fff;
+      color: white;
+      margin-top: 30px;
+      line-height: 1.6;
     }
 
-    .panel div li:last-child {
-      border-bottom: none;
+    .extra-content p {
+      margin-bottom: 20px;
     }
 
-    /* Extra styling to fill in the required line count */
-    .hidden-info {
-      display: none;
-      color: #fff;
-      font-size: 16px;
-      margin-top: 20px;
+    .extra-content h3 {
+      font-size: 24px;
+      margin-bottom: 15px;
     }
 
+    .extra-content ul {
+      list-style-type: square;
+      margin-left: 30px;
+    }
+
+    .extra-content li {
+      margin-bottom: 10px;
+    }
+
+    /* Filler styles for extra content */
     .info-button {
       font-size: 16px;
       color: #fff;
@@ -155,32 +135,12 @@
       background-color: rgba(255, 255, 255, 0.2);
     }
 
-    .tooltip {
-      position: relative;
-      display: inline-block;
-    }
-
-    .tooltip .tooltiptext {
-      visibility: hidden;
-      background-color: rgba(0, 0, 0, 0.7);
+    .hidden-info {
+      display: none;
       color: #fff;
-      text-align: center;
-      padding: 5px 0;
-      border-radius: 5px;
-      position: absolute;
-      z-index: 1;
-      bottom: 100%;
-      left: 50%;
-      margin-left: -60px;
-      opacity: 0;
-      transition: opacity 0.3s;
+      font-size: 16px;
+      margin-top: 20px;
     }
-
-    .tooltip:hover .tooltiptext {
-      visibility: visible;
-      opacity: 1;
-    }
-
   </style>
 </head>
 <body>
@@ -191,34 +151,77 @@
   <button class="button" onclick="showPasswordPrompt()">Owner Panel</button>
 
   <div class="panel hidden" id="fileViewPanel"></div>
-  <div class="panel hidden" id="ownerPanel">Feature Coming Soon<br><span style="font-family: 'Segoe Script', cursive;">𝓱𝓲</span></div>
+  <div class="panel hidden" id="ownerPanel">
+    <h2>Owner Panel</h2>
+    <p>Select an option below:</p>
+    <button onclick="manageFiles()">Edit Files</button>
+    <button onclick="manageContributors()">Manage Contributors</button>
+    <button onclick="manageRepository()">Manage Repository</button>
+  </div>
+
+  <div class="extra-content">
+    <h3>Repository Information</h3>
+    <p>This is a placeholder section for more repository-related information. Below are some bullet points:</p>
+    <ul>
+      <li>Learn more about the repository</li>
+      <li>Explore repository contents and management options</li>
+      <li>Contribute to the repository's growth and development</li>
+    </ul>
+    <p>Feel free to explore the features of this page, including file management and repository configuration!</p>
+  </div>
+
+  <div class="footer">
+    <p>Powered by hgland &copy; 2025</p>
+  </div>
 
   <script>
     function viewFile(fileName) {
       const panel = document.getElementById('fileViewPanel');
       const ownerPanel = document.getElementById('ownerPanel');
+      if (fileName === 'README.md') {
+        panel.innerHTML = "<h2>README.md</h2><p>This is the content of the README file...</p>";
+      } else if (fileName === 'LICENSE') {
+        panel.innerHTML = "<h2>LICENSE</h2><p>This is the content of the LICENSE file...</p>";
+      }
       panel.classList.remove('hidden');
       ownerPanel.classList.add('hidden');
-      panel.innerHTML = `Viewing content of <b>${fileName}</b> (simulated content here).`;
     }
 
     function showPasswordPrompt() {
-      const pass = prompt("Enter the owner panel passcode:");
-      const panel = document.getElementById('ownerPanel');
-      const filePanel = document.getElementById('fileViewPanel');
-
-      if (pass === "hgland-official$ownerpanel") {
-        panel.classList.remove('hidden');
-        filePanel.classList.add('hidden');
+      const password = prompt("Enter the Owner Panel Password:");
+      if (password === "hgland-official$ownerpanel") {
+        document.getElementById('ownerPanel').classList.remove('hidden');
       } else {
-        alert("Incorrect passcode!");
+        alert("Incorrect password!");
+      }
+    }
+
+    function manageFiles() {
+      alert("Simulating File Management: Edit Files");
+    }
+
+    function manageContributors() {
+      const action = prompt("Enter 'remove' to remove a contributor, or 'view' to see current contributors:");
+      if (action.toLowerCase() === 'remove') {
+        const contributor = prompt("Enter the username of the contributor to remove:");
+        alert(`Removing contributor: ${contributor}`);
+      } else if (action.toLowerCase() === 'view') {
+        alert("Viewing current contributors...");
+      } else {
+        alert("Invalid action.");
+      }
+    }
+
+    function manageRepository() {
+      const action = prompt("Enter 'settings' to manage repository settings, or 'view' to view settings:");
+      if (action.toLowerCase() === 'settings') {
+        alert("Simulating repository settings management...");
+      } else if (action.toLowerCase() === 'view') {
+        alert("Viewing repository settings...");
+      } else {
+        alert("Invalid action.");
       }
     }
   </script>
-
-  <div class="footer">
-    © 2025 hgland. All rights reserved. <a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a>
-  </div>
-
 </body>
 </html>
