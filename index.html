@@ -120,7 +120,6 @@
       margin-bottom: 10px;
     }
 
-    /* Filler styles for extra content */
     .info-button {
       font-size: 16px;
       color: #fff;
@@ -217,7 +216,12 @@
       if (action.toLowerCase() === 'settings') {
         alert("Simulating repository settings management...");
       } else if (action.toLowerCase() === 'view') {
-        alert("Viewing repository settings...");
+        // Instant pop-up of repository settings when 'view' is typed
+        document.getElementById('ownerPanel').classList.add('hidden');
+        const repoSettingsPanel = document.createElement('div');
+        repoSettingsPanel.classList.add('panel');
+        repoSettingsPanel.innerHTML = "<h2>Repository Settings</h2><p>Viewing and managing the settings for this repository...</p>";
+        document.body.appendChild(repoSettingsPanel);
       } else {
         alert("Invalid action.");
       }
