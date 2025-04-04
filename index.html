@@ -1,306 +1,212 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>hgland</title>
   <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@700&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
-      font-family: 'Arial', sans-serif;
-      background-color: black;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-      padding-top: 100px; /* Add padding to avoid content being hidden behind the fixed topbar */
+      font-family: 'Arimo', sans-serif;
+      background-color: #000;
+      color: #fff;
+      padding-top: 100px;
+      text-align: center;
     }
 
     .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
       width: 100%;
-      background-color: #333;
+      background-color: #111;
       color: white;
-      padding: 15px;
-      text-align: center;
-      font-size: 32px;
-      font-weight: bold;
+      padding: 15px 30px;
       border-bottom: 3px solid yellow;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      position: fixed;
-      top: 0;
-      left: 0;
-      z-index: 10; /* Ensure the topbar stays on top of other content */
+      z-index: 1000;
     }
 
     .topbar .title {
       font-size: 32px;
+      font-weight: bold;
     }
 
-    .topbar .search-bar {
+    .search-bar {
       display: flex;
       align-items: center;
     }
 
-    .topbar input[type="text"] {
+    .search-bar input {
+      padding: 8px 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      outline: none;
       background-color: white;
       color: black;
-      padding: 10px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      margin-left: 10px;
-      width: 200px;
     }
 
-    .search-icon {
+    .search-bar .search-icon {
       font-size: 20px;
-      color: white;
       margin-left: 10px;
       cursor: pointer;
     }
 
-    .title {
+    .main-title {
       font-size: 64px;
-      text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
       margin-bottom: 60px;
+      margin-top: 20px;
+    }
+
+    .button-container {
+      max-width: 600px;
+      margin: 0 auto;
     }
 
     .button {
       background-color: black;
       color: white;
-      font-size: 28px;
-      padding: 20px 50px;
-      margin: 15px 0;
-      border: 2px solid yellow;
-      border-radius: 12px;
+      font-size: 24px;
+      padding: 20px;
+      width: 100%;
+      border: none;
+      border-radius: 0;
       cursor: pointer;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
-      transition: transform 0.2s ease;
-      width: 350px;
-      margin-top: 80px; /* Adjust for the fixed topbar */
+      transition: background 0.2s;
     }
 
     .button:hover {
-      transform: scale(1.05);
-      background-color: #444;
+      background-color: #222;
     }
 
-    .button:active {
-      background-color: yellow;
+    .divider {
+      border: none;
+      border-top: 2px solid yellow;
+      margin: 20px 0;
+    }
+
+    .popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #222;
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 80%;
+      max-width: 500px;
+      display: none;
+      z-index: 1001;
+    }
+
+    .popup button {
+      margin-top: 10px;
+      padding: 10px 15px;
+      background: yellow;
       color: black;
+      border: none;
+      cursor: pointer;
     }
 
     .hidden {
       display: none;
     }
-
-    .panel {
-      margin-top: 30px;
-      color: white;
-      font-size: 24px;
-      padding: 30px;
-      border-radius: 10px;
-      background: rgba(0, 0, 0, 0.7);
-      max-width: 600px;
-      text-align: center;
-    }
-
-    .panel h2 {
-      font-size: 32px;
-      margin-bottom: 20px;
-    }
-
-    .panel p {
-      font-size: 18px;
-      line-height: 1.5;
-    }
-
-    .panel button {
-      padding: 15px 30px;
-      font-size: 22px;
-      margin-top: 20px;
-      background-color: yellow;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    }
-
-    .panel button:hover {
-      background-color: darkgoldenrod;
-    }
-
-    .footer {
-      position: fixed;
-      bottom: 10px;
-      width: 100%;
-      text-align: center;
-      font-size: 18px;
-      color: white;
-    }
-
-    .extra-content {
-      font-size: 18px;
-      color: white;
-      margin-top: 30px;
-      line-height: 1.6;
-    }
-
-    .extra-content p {
-      margin-bottom: 20px;
-    }
-
-    .extra-content h3 {
-      font-size: 24px;
-      margin-bottom: 15px;
-    }
-
-    .extra-content ul {
-      list-style-type: square;
-      margin-left: 30px;
-    }
-
-    .extra-content li {
-      margin-bottom: 10px;
-    }
-
-    .info-button {
-      font-size: 16px;
-      color: #fff;
-      background-color: transparent;
-      border: 1px solid #fff;
-      padding: 10px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    .info-button:hover {
-      background-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .hidden-info {
-      display: none;
-      color: #fff;
-      font-size: 16px;
-      margin-top: 20px;
-    }
-
-    .input-field {
-      background-color: white;
-      color: black;
-      padding: 10px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      margin-top: 10px;
-      width: 300px;
-    }
-
-    .input-field:focus {
-      outline: none;
-      border-color: yellow;
-    }
-
-    .input-button {
-      background-color: yellow;
-      color: black;
-      padding: 10px 20px;
-      border-radius: 5px;
-      margin-top: 10px;
-      border: none;
-      cursor: pointer;
-      font-size: 18px;
-    }
-
-    .input-button:hover {
-      background-color: darkgoldenrod;
-    }
   </style>
 </head>
 <body>
+
   <div class="topbar">
     <div class="title">hgland</div>
     <div class="search-bar">
-      <input type="text" id="search-input" placeholder="Search..." />
-      <span class="search-icon">🔍</span> <!-- Search icon -->
+      <input type="text" id="searchInput" placeholder="Search..." onkeyup="searchPages()"/>
+      <span class="search-icon" onclick="searchPages()">🔍</span>
     </div>
   </div>
 
-  <div class="title">hgland</div>
+  <div class="main-title">hgland</div>
 
-  <button class="button" onclick="viewFile('README.md')">About</button>
-  <button class="button" onclick="viewFile('LICENSE')">LICENSE</button>
-  <button class="button" onclick="showPasswordPrompt()">Owner Panel</button>
+  <div class="button-container">
+    <button class="button" onclick="showPopup('aboutPopup')">About</button>
+    <hr class="divider">
+    <button class="button" onclick="showPopup('licensePopup')">LICENSE</button>
+    <hr class="divider">
+    <button class="button" onclick="showPasswordPrompt()">Owner Panel</button>
+  </div>
 
-  <div class="panel hidden" id="fileViewPanel"></div>
-  <div class="panel hidden" id="ownerPanel">
+  <!-- Popups -->
+  <div id="aboutPopup" class="popup">
+    <h2>About</h2>
+    <p>Viewing README.md content...</p>
+    <button onclick="closePopup('aboutPopup')">Close</button>
+  </div>
+
+  <div id="licensePopup" class="popup">
+    <h2>LICENSE</h2>
+    <p>Viewing LICENSE content...</p>
+    <button onclick="closePopup('licensePopup')">Close</button>
+  </div>
+
+  <div id="ownerPanelPopup" class="popup hidden">
     <h2>Owner Panel</h2>
-    <p>Select an option below:</p>
-    <button onclick="manageFiles()">Edit Files</button>
-    <button onclick="manageContributors()">Manage Contributors</button>
-    <button onclick="manageRepository()">Manage Repository</button>
-  </div>
-
-  <div class="extra-content">
-    <h3>Repository Information</h3>
-    <p>This is a placeholder section for more repository-related information. Below are some bullet points:</p>
-    <ul>
-      <li>Learn more about the repository</li>
-      <li>Explore repository contents and management options</li>
-      <li>Contribute to the repository's growth and development</li>
-    </ul>
-    <p>Feel free to explore the features of this page, including file management and repository configuration!</p>
-  </div>
-
-  <div class="footer">
-    <p>Powered by hgland &copy; 2025</p>
+    <p>Welcome, owner.</p>
+    <button onclick="alert('Editing files...')">Edit Files</button>
+    <button onclick="alert('Managing contributors...')">Manage Contributors</button>
+    <button onclick="alert('Managing all repository pages...')">Manage Repository</button>
+    <button onclick="closePopup('ownerPanelPopup')">Close</button>
   </div>
 
   <script>
-    function viewFile(fileName) {
-      const panel = document.getElementById('fileViewPanel');
-      const ownerPanel = document.getElementById('ownerPanel');
-      if (fileName === 'README.md') {
-        panel.innerHTML = "<h2>README.md</h2><p>This is the content of the README file...</p>";
-      } else if (fileName === 'LICENSE') {
-        panel.innerHTML = "<h2>LICENSE</h2><p>This is the content of the LICENSE file...</p>";
-      }
-      panel.classList.remove('hidden');
-      ownerPanel.classList.add('hidden');
+    function showPopup(id) {
+      document.getElementById(id).style.display = 'block';
+    }
+
+    function closePopup(id) {
+      document.getElementById(id).style.display = 'none';
     }
 
     function showPasswordPrompt() {
-      const passwordInput = document.createElement('input');
-      passwordInput.classList.add('input-field');
-      passwordInput.type = 'password';
-      passwordInput.placeholder = 'Enter Owner Panel Passcode';
+      const existing = document.getElementById('passwordPrompt');
+      if (existing) return;
 
-      const submitButton = document.createElement('button');
-      submitButton.classList.add('input-button');
-      submitButton.innerHTML = 'Submit';
-      submitButton.onclick = function () {
-        const password = passwordInput.value;
-        if (password === 'hgland-official$ownerpanel') {
-          document.getElementById('ownerPanel').classList.remove('hidden');
-          document.body.removeChild(passwordInput);
-          document.body.removeChild(submitButton);
+      const input = document.createElement('input');
+      input.type = 'password';
+      input.placeholder = 'Enter Owner Passcode';
+      input.className = 'input-field';
+      input.id = 'passwordPrompt';
+
+      const btn = document.createElement('button');
+      btn.className = 'input-button';
+      btn.textContent = 'Submit';
+      btn.onclick = function() {
+        if (input.value === 'hgland-official$ownerpanel') {
+          showPopup('ownerPanelPopup');
+          input.remove();
+          btn.remove();
         } else {
-          alert('Incorrect passcode!');
+          alert('Incorrect passcode.');
         }
       };
 
-      document.body.appendChild(passwordInput);
-      document.body.appendChild(submitButton);
+      document.body.appendChild(input);
+      document.body.appendChild(btn);
     }
 
-    function manageFiles() {
-      alert("Simulating File Management: Edit Files");
+    function searchPages() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      if (query.includes("about")) {
+        showPopup('aboutPopup');
+      } else if (query.includes("license")) {
+        showPopup('licensePopup');
+      } else if (query.includes("owner")) {
+        showPasswordPrompt();
+      }
     }
+  </script>
 
-    function manageContributors() {
-      const action = prompt("Enter 'remove' to remove a contributor, or 'view' to see current contributors:");
-      if (action.toLowerCase()
+</body>
+</html>
