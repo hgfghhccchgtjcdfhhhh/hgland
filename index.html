@@ -1,212 +1,266 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>hgland</title>
-  <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hgland - Admin Dashboard</title>
   <style>
     body {
       margin: 0;
-      font-family: 'Arimo', sans-serif;
-      background-color: #000;
-      color: #fff;
-      padding-top: 100px;
-      text-align: center;
+      font-family: 'Arial', sans-serif;
+      background-color: #222;
+      background-image: url('https://www.transparenttextures.com/patterns/asfalt-light.png');
+      color: white;
+      overflow-x: hidden;
     }
 
+    /* Topbar */
     .topbar {
       position: fixed;
       top: 0;
-      left: 0;
       width: 100%;
-      background-color: #111;
-      color: white;
-      padding: 15px 30px;
-      border-bottom: 3px solid yellow;
+      background: #111;
+      padding: 15px 20px;
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      align-items: center;
       z-index: 1000;
+      box-shadow: 0 4px 10px rgba(255, 255, 0, 0.2);
     }
 
-    .topbar .title {
-      font-size: 32px;
-      font-weight: bold;
+    .topbar h1 {
+      font-family: 'Arial Black', sans-serif;
+      font-size: 24px;
+      margin: 0;
     }
 
-    .search-bar {
+    .search-container {
       display: flex;
       align-items: center;
+      gap: 10px;
     }
 
-    .search-bar input {
-      padding: 8px 12px;
-      font-size: 16px;
+    .search-container input {
       border: none;
-      border-radius: 5px;
-      outline: none;
+      padding: 8px;
+      border-radius: 8px;
+      font-family: 'Arial Black', sans-serif;
       background-color: white;
       color: black;
     }
 
-    .search-bar .search-icon {
+    .search-icon {
       font-size: 20px;
-      margin-left: 10px;
       cursor: pointer;
     }
 
-    .main-title {
-      font-size: 64px;
-      margin-bottom: 60px;
-      margin-top: 20px;
-    }
-
-    .button-container {
-      max-width: 600px;
+    /* Main Content */
+    .container {
+      padding-top: 80px;
+      text-align: center;
+      max-width: 800px;
       margin: 0 auto;
     }
 
+    /* Buttons */
     .button {
-      background-color: black;
-      color: white;
-      font-size: 24px;
-      padding: 20px;
-      width: 100%;
+      font-family: 'Arial Black', sans-serif;
+      font-size: 20px;
+      margin: 20px 0;
+      padding: 15px;
+      width: 90%;
+      background: yellow;
+      color: black;
+      box-shadow: 0 4px 10px rgba(255, 255, 0, 0.5);
       border: none;
-      border-radius: 0;
+      border-radius: 10px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: 0.3s;
     }
 
     .button:hover {
-      background-color: #222;
+      transform: scale(1.05);
     }
 
     .divider {
-      border: none;
-      border-top: 2px solid yellow;
-      margin: 20px 0;
+      width: 90%;
+      margin: 10px auto;
+      border-top: 3px solid yellow;
     }
 
-    .popup {
+    /* Modal Background */
+    .modal-bg {
+      display: none;
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #222;
-      color: white;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 999;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 50px;
+      transition: opacity 0.3s ease;
+    }
+
+    /* Modal Content */
+    .modal {
+      background: #111;
       padding: 20px;
       border-radius: 10px;
       width: 80%;
-      max-width: 500px;
-      display: none;
-      z-index: 1001;
+      height: 80%;
+      max-height: 600px;
+      overflow-y: auto;
+      position: relative;
+      opacity: 0;
+      transform: translateY(-30px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
     }
 
-    .popup button {
-      margin-top: 10px;
-      padding: 10px 15px;
-      background: yellow;
-      color: black;
+    .modal iframe {
+      width: 100%;
+      height: 100%;
       border: none;
-      cursor: pointer;
     }
 
-    .hidden {
-      display: none;
+    /* Close Button */
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      background: red;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    /* Input Style */
+    .input-box {
+      padding: 10px;
+      border-radius: 8px;
+      border: 2px solid #fff;
+      font-family: Arial, sans-serif;
+      background: white;
+      color: black;
+      margin-bottom: 20px;
+    }
+
+    /* Quartz Background for Text */
+    .text-quartz {
+      background-image: url('https://www.transparenttextures.com/patterns/quilt.png');
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
-
   <div class="topbar">
-    <div class="title">hgland</div>
-    <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="Search..." onkeyup="searchPages()"/>
-      <span class="search-icon" onclick="searchPages()">🔍</span>
+    <h1>hgland</h1>
+    <div class="search-container">
+      <input type="text" id="search" placeholder="Search...">
+      <div class="search-icon" onclick="search()">🔍</div>
     </div>
   </div>
 
-  <div class="main-title">hgland</div>
+  <div class="container">
+    <div class="text-quartz">
+      <h2>Welcome to hgland</h2>
+      <p>Manage your repository and settings with ease.</p>
+    </div>
 
-  <div class="button-container">
-    <button class="button" onclick="showPopup('aboutPopup')">About</button>
-    <hr class="divider">
-    <button class="button" onclick="showPopup('licensePopup')">LICENSE</button>
-    <hr class="divider">
-    <button class="button" onclick="showPasswordPrompt()">Owner Panel</button>
+    <button class="button" onclick="showPage('README.md')">About</button>
+    <div class="divider"></div>
+
+    <button class="button" onclick="showPage('LICENSE')">LICENSE</button>
+    <div class="divider"></div>
+
+    <button class="button" onclick="askPasscode()">Owner Panel</button>
   </div>
 
-  <!-- Popups -->
-  <div id="aboutPopup" class="popup">
-    <h2>About</h2>
-    <p>Viewing README.md content...</p>
-    <button onclick="closePopup('aboutPopup')">Close</button>
-  </div>
-
-  <div id="licensePopup" class="popup">
-    <h2>LICENSE</h2>
-    <p>Viewing LICENSE content...</p>
-    <button onclick="closePopup('licensePopup')">Close</button>
-  </div>
-
-  <div id="ownerPanelPopup" class="popup hidden">
-    <h2>Owner Panel</h2>
-    <p>Welcome, owner.</p>
-    <button onclick="alert('Editing files...')">Edit Files</button>
-    <button onclick="alert('Managing contributors...')">Manage Contributors</button>
-    <button onclick="alert('Managing all repository pages...')">Manage Repository</button>
-    <button onclick="closePopup('ownerPanelPopup')">Close</button>
+  <!-- Modal for Owner Panel -->
+  <div class="modal-bg" id="modal-bg">
+    <div class="modal">
+      <button class="close-btn" onclick="closeModal()">Close</button>
+      <iframe id="modal-frame" src=""></iframe>
+    </div>
   </div>
 
   <script>
-    function showPopup(id) {
-      document.getElementById(id).style.display = 'block';
+    const CORRECT_PASSCODE = "hgland-official$ownerpanel";
+    const MAX_ATTEMPTS = 5;
+    const LOCKOUT_KEY = "hgland_lockout";
+    const ATTEMPT_KEY = "hgland_attempts";
+
+    function showPage(page) {
+      alert("This would show: " + page + " (as a preview, not raw code)");
     }
 
-    function closePopup(id) {
-      document.getElementById(id).style.display = 'none';
-    }
+    function askPasscode() {
+      const now = new Date();
+      const lockout = localStorage.getItem(LOCKOUT_KEY);
+      const attempts = parseInt(localStorage.getItem(ATTEMPT_KEY) || "0");
 
-    function showPasswordPrompt() {
-      const existing = document.getElementById('passwordPrompt');
-      if (existing) return;
+      if (lockout && new Date(lockout) > now) {
+        alert("Too many failed attempts. Try again tomorrow.");
+        return;
+      }
 
-      const input = document.createElement('input');
-      input.type = 'password';
-      input.placeholder = 'Enter Owner Passcode';
-      input.className = 'input-field';
-      input.id = 'passwordPrompt';
+      const pass = prompt("Enter Owner Panel Passcode:");
 
-      const btn = document.createElement('button');
-      btn.className = 'input-button';
-      btn.textContent = 'Submit';
-      btn.onclick = function() {
-        if (input.value === 'hgland-official$ownerpanel') {
-          showPopup('ownerPanelPopup');
-          input.remove();
-          btn.remove();
+      if (pass === CORRECT_PASSCODE) {
+        localStorage.setItem(ATTEMPT_KEY, "0");
+        openModal("https://github.com/hgland/settings");
+      } else {
+        const newAttempts = attempts + 1;
+        localStorage.setItem(ATTEMPT_KEY, newAttempts);
+        if (newAttempts >= MAX_ATTEMPTS) {
+          const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+          localStorage.setItem(LOCKOUT_KEY, tomorrow.toISOString());
+          alert("Too many failed attempts. You are locked out for a day.");
         } else {
-          alert('Incorrect passcode.');
+          alert(`Wrong passcode. ${MAX_ATTEMPTS - newAttempts} attempts left.`);
         }
-      };
-
-      document.body.appendChild(input);
-      document.body.appendChild(btn);
+      }
     }
 
-    function searchPages() {
-      const query = document.getElementById('searchInput').value.toLowerCase();
-      if (query.includes("about")) {
-        showPopup('aboutPopup');
-      } else if (query.includes("license")) {
-        showPopup('licensePopup');
-      } else if (query.includes("owner")) {
-        showPasswordPrompt();
+    function openModal(url) {
+      const modal = document.getElementById("modal-bg");
+      const modalContent = document.querySelector(".modal");
+      document.getElementById("modal-frame").src = url;
+      modal.style.display = "flex";
+      setTimeout(() => {
+        modalContent.style.opacity = 1;
+        modalContent.style.transform = "translateY(0)";
+      }, 10);
+    }
+
+    function closeModal() {
+      const modal = document.getElementById("modal-bg");
+      const modalContent = document.querySelector(".modal");
+      modalContent.style.opacity = 0;
+      modalContent.style.transform = "translateY(-30px)";
+      setTimeout(() => {
+        modal.style.display = "none";
+        document.getElementById("modal-frame").src = "";
+      }, 300);
+    }
+
+    function search() {
+      const query = document.getElementById("search").value;
+      if (query.toLowerCase().includes("readme")) {
+        showPage("README.md");
+      } else if (query.toLowerCase().includes("license")) {
+        showPage("LICENSE");
+      } else if (query.toLowerCase().includes("owner")) {
+        askPasscode();
+      } else {
+        alert("No matching page found.");
       }
     }
   </script>
-
 </body>
 </html>
