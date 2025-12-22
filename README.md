@@ -1,47 +1,36 @@
-# hgland
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-hgland is an AI-powered website builder platform built around a fully autonomous build agent called **hgland Agent**, powered by **OpenAI GPT-5.1 Codex Max**.
+## Getting Started
 
-The hgland Agent always operates through a **code editor** and is capable of creating websites end to end from a single description. It can scaffold projects, generate and edit real multi-file codebases, install packages, run terminal commands, fix build and runtime errors, add integrations, configure environment variables, and iterate until the website works.
+First, run the development server:
 
-## Core Capabilities
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-- Fully autonomous website generation
-- Real codebase generation and editing
-- Package installation and command execution
-- Error detection and self-repair
-- Integration setup (analytics, forms, payments, CMS, etc.)
-- SEO configuration
-- One-click deployment
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Ways to Build
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-Users can create websites in three different ways:
-- AI generation using hgland Agent
-- Drag-and-drop visual editing layered on top of the underlying code
-- Manual code editing with full file access
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-All methods operate on the same underlying project and can be mixed freely.
+## Learn More
 
-## SEO Features
+To learn more about Next.js, take a look at the following resources:
 
-hgland includes built-in SEO tooling such as:
-- Meta titles and descriptions
-- Open Graph and Twitter metadata
-- Canonical URLs
-- Clean URLs and redirects
-- sitemap.xml and robots.txt generation
-- Performance and accessibility considerations
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-## Deployment
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-hgland supports automatic deployment with:
-- One-click deploys
-- Staging previews
-- Build logs and rollbacks
-- Hosting on a hgland subdomain
-- Custom domain connection with SSL
+## Deploy on Vercel
 
-## Goal
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-The goal of hgland is to allow users to go from idea to live website as quickly as possible, while still providing full control over the code and infrastructure when needed.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
