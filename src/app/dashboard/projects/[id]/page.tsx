@@ -33,13 +33,6 @@ interface SEOSettings {
   robots: string;
 }
 
-interface ResourceConfig {
-  ram: number;
-  cpu: number;
-  gpu: boolean;
-  gpuType: string;
-}
-
 interface IntegrationItem {
   id: string;
   name: string;
@@ -57,7 +50,6 @@ interface Project {
   files: FileItem[] | null;
   packages: PackageItem[] | null;
   seoSettings: SEOSettings | null;
-  resources: ResourceConfig | null;
   integrations: IntegrationItem[] | null;
 }
 
@@ -66,14 +58,7 @@ interface ChatMessage {
   content: string;
 }
 
-type EditorTab = 'visual' | 'code' | 'ai' | 'languages' | 'packages' | 'terminal' | 'seo' | 'resources' | 'integrations';
-
-const defaultResources: ResourceConfig = {
-  ram: 128,
-  cpu: 8,
-  gpu: true,
-  gpuType: 'NVIDIA A100'
-};
+type EditorTab = 'visual' | 'code' | 'ai' | 'languages' | 'packages' | 'terminal' | 'seo' | 'integrations';
 
 const defaultSEO: SEOSettings = {
   title: '',
@@ -270,7 +255,6 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   const [runningCommand, setRunningCommand] = useState(false);
   
   const [seoSettings, setSeoSettings] = useState<SEOSettings>(defaultSEO);
-  const [resources, setResources] = useState<ResourceConfig>(defaultResources);
   const [integrations, setIntegrations] = useState<IntegrationItem[]>(availableIntegrations);
   
   const [aiPrompt, setAiPrompt] = useState('');
@@ -316,7 +300,6 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
         
         if (data.project.packages) setPackages(data.project.packages);
         if (data.project.seoSettings) setSeoSettings(data.project.seoSettings);
-        if (data.project.resources) setResources(data.project.resources);
         if (data.project.integrations) setIntegrations(data.project.integrations);
         
         if (messagesRes.ok) {
