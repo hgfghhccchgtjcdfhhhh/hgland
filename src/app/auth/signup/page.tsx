@@ -74,7 +74,7 @@ export default function SignupPage() {
                   name="fullName"
                   required
                   className="w-full px-4 py-3 bg-cyan-800/30 border border-cyan-700/50 rounded-lg text-white placeholder-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                  placeholder="John Doe"
+                  placeholder="Your full name"
                 />
               </div>
               <div>
@@ -84,7 +84,7 @@ export default function SignupPage() {
                   name="username"
                   required
                   className="w-full px-4 py-3 bg-cyan-800/30 border border-cyan-700/50 rounded-lg text-white placeholder-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                  placeholder="johndoe"
+                  placeholder="Your username"
                 />
               </div>
             </div>
