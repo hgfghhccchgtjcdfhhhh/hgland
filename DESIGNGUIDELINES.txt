@@ -1,0 +1,2 @@
+For the Frontend use PURE next.js with fullstack tsx, for the backend use express and PostgreSQL (replits built in databases feature) for the database to store data.
+Use Email, Phone, Password, Birth Date, Full name and username sign in/up.
