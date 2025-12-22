@@ -3,6 +3,7 @@
 import { useEffect, useState, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
 import { 
   ArrowLeft, Save, Eye, Code2, Layout, Sparkles, Settings, Globe, Play, Loader2, Send, Waves,
   FolderPlus, FilePlus, Package, Terminal, Search, Cpu, HardDrive, Zap, Plug, Trash2, ChevronRight, ChevronDown, File, Folder, Code, Box
@@ -948,7 +949,13 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                     {chatMessages.map((msg, i) => (
                       <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[80%] px-4 py-3 rounded-2xl ${msg.role === 'user' ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white' : 'bg-cyan-900/40 border border-cyan-800/50 text-cyan-100'}`}>
-                          {msg.content}
+                          {msg.role === 'user' ? (
+                            <span className="whitespace-pre-wrap">{msg.content}</span>
+                          ) : (
+                            <div className="prose prose-invert prose-sm max-w-none prose-p:my-2 prose-headings:text-cyan-200 prose-code:bg-cyan-950 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-cyan-950 prose-pre:border prose-pre:border-cyan-800/50 prose-a:text-cyan-400 prose-strong:text-cyan-200 prose-ul:my-2 prose-ol:my-2 prose-li:my-0">
+                              <ReactMarkdown>{msg.content}</ReactMarkdown>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
