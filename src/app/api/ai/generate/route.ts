@@ -48,24 +48,30 @@ Return a JSON object with this structure:
 
 Only return valid JSON, no markdown or explanation.`;
 
-    const completion = await openai.chat.completions.create({
+    const response = await openai.responses.create({
       model: 'gpt-5.1-codex-max',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Create a website based on this description: ${prompt}` },
-      ],
-      temperature: 0.7,
-      max_tokens: 4000,
-      response_format: { type: 'json_object' },
+      instructions: systemPrompt,
+      input: `Create a website based on this description: ${prompt}`,
+      reasoning: { effort: 'medium' },
     });
 
-    const content = completion.choices[0]?.message?.content;
+    const content = response.output_text;
     
     if (!content) {
       return NextResponse.json({ error: 'No response from AI' }, { status: 500 });
     }
 
-    const generatedContent = JSON.parse(content);
+    let generatedContent;
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        generatedContent = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON found in response');
+      }
+    } catch {
+      return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
