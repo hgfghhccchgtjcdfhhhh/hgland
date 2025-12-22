@@ -275,6 +275,8 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   
   const [aiPrompt, setAiPrompt] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const previewRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     async function loadProject() {
@@ -440,6 +442,17 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     setExpandedFolders(newExpanded);
   }
 
+  useEffect(() => {
+    if (previewRef.current && code) {
+      const doc = previewRef.current.contentDocument;
+      if (doc) {
+        doc.open();
+        doc.write(code);
+        doc.close();
+      }
+    }
+  }, [code]);
+
   async function installPackage() {
     if (!packageSearch.trim()) return;
     const pkgName = packageSearch.trim();
@@ -529,14 +542,20 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
 
   async function saveProjectData(data: Record<string, unknown>) {
     if (!project) return;
+    setSaveStatus('saving');
     try {
-      await fetch(`/api/projects/${project.id}`, {
+      const res = await fetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
+      if (!res.ok) throw new Error('Save failed');
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
       console.error('Failed to save project:', err);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
   }
 
@@ -780,11 +799,18 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
               <div className="w-1/3 border-l border-cyan-800/30 p-4 flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-medium text-cyan-400">Preview</h3>
-                  <button className="flex items-center gap-1 text-xs text-cyan-400"><Play className="w-3 h-3" /> Run</button>
+                  <div className="flex items-center gap-2">
+                    {saveStatus === 'saving' && <span className="text-xs text-yellow-400">Saving...</span>}
+                    {saveStatus === 'saved' && <span className="text-xs text-green-400">Saved ✓</span>}
+                    {saveStatus === 'error' && <span className="text-xs text-red-400">Error</span>}
+                  </div>
                 </div>
-                <div className="bg-white rounded-lg flex-1 overflow-auto p-4">
-                  <div dangerouslySetInnerHTML={{ __html: code }} />
-                </div>
+                <iframe
+                  ref={previewRef}
+                  className="flex-1 w-full rounded-lg border border-cyan-800/50 bg-white"
+                  title="HTML Preview"
+                  sandbox="allow-scripts allow-same-origin"
+                />
               </div>
             </>
           )}
