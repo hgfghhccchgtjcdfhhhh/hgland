@@ -400,47 +400,70 @@ Be helpful, creative, and thorough.`;
     let iterations = 0;
     const maxIterations = 10;
 
+    const responsesTools = tools.map(t => {
+      const fn = t.type === 'function' ? t.function : null;
+      if (!fn) return null;
+      return {
+        type: 'function' as const,
+        name: fn.name,
+        description: fn.description,
+        parameters: {
+          ...fn.parameters,
+          additionalProperties: false,
+        },
+        strict: true,
+      };
+    }).filter(Boolean) as Array<{type: 'function'; name: string; description?: string; parameters: Record<string, unknown>; strict: boolean}>;
+
     while (iterations < maxIterations) {
       iterations++;
 
-      const response = await openai.chat.completions.create({
+      const response = await openai.responses.create({
         model: 'gpt-5.1-codex-max',
-        messages,
-        tools,
-        tool_choice: 'auto',
+        instructions: systemPrompt,
+        input: messages.map(m => {
+          if (m.role === 'system') return { role: 'user' as const, content: m.content as string };
+          if (m.role === 'tool') return { role: 'user' as const, content: `Tool result: ${m.content}` };
+          return { role: m.role as 'user' | 'assistant', content: m.content as string };
+        }),
+        tools: responsesTools,
       });
 
-      const choice = response.choices[0];
-      const message = choice.message;
+      let hasToolCalls = false;
+      let textContent = '';
 
-      if (message.tool_calls && message.tool_calls.length > 0) {
-        messages.push(message);
-
-        for (const toolCall of message.tool_calls) {
-          if (toolCall.type !== 'function') continue;
-          const fn = toolCall.function;
-          const args = JSON.parse(fn.arguments);
-          const result = await executeToolCall(fn.name, args);
+      for (const item of response.output) {
+        if (item.type === 'function_call') {
+          hasToolCalls = true;
+          const args = JSON.parse(item.arguments);
+          const result = await executeToolCall(item.name, args);
           
           toolResults.push({
-            tool: fn.name,
+            tool: item.name,
             success: result.success,
             result: result.result,
           });
 
           messages.push({
-            role: 'tool',
-            tool_call_id: toolCall.id,
-            content: JSON.stringify(result.result),
+            role: 'assistant',
+            content: `Called ${item.name} with result: ${JSON.stringify(result.result)}`,
           });
+        } else if (item.type === 'message' && item.content) {
+          for (const content of item.content) {
+            if (content.type === 'output_text') {
+              textContent += content.text;
+            }
+          }
         }
-      } else {
-        finalResponse = message.content || '';
+      }
+
+      if (!hasToolCalls) {
+        finalResponse = textContent;
         break;
       }
 
-      if (choice.finish_reason === 'stop') {
-        finalResponse = message.content || '';
+      if (response.status === 'completed' && !hasToolCalls) {
+        finalResponse = textContent;
         break;
       }
     }
