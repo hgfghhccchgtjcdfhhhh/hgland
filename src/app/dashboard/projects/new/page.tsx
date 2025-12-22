@@ -1,0 +1,218 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft, Sparkles, Wand2 } from 'lucide-react';
+
+export default function NewProjectPage() {
+  const router = useRouter();
+  const [step, setStep] = useState<'choose' | 'ai' | 'manual'>('choose');
+  const [loading, setLoading] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+
+  async function createProject(name: string, description: string) {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description }),
+      });
+
+      if (!res.ok) throw new Error('Failed to create project');
+
+      const { project } = await res.json();
+      router.push(`/dashboard/projects/${project.id}`);
+    } catch {
+      alert('Failed to create project');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleManualSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    await createProject(
+      formData.get('name') as string,
+      formData.get('description') as string
+    );
+  }
+
+  async function handleAIGenerate() {
+    if (!aiPrompt.trim()) return;
+    await createProject(
+      aiPrompt.slice(0, 50) + (aiPrompt.length > 50 ? '...' : ''),
+      aiPrompt
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-900">
+      <nav className="bg-slate-800/50 border-b border-slate-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center h-16">
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back to Dashboard
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      <main className="max-w-3xl mx-auto px-4 py-12">
+        {step === 'choose' && (
+          <>
+            <div className="text-center mb-12">
+              <h1 className="text-3xl font-bold text-white mb-4">Create a New Website</h1>
+              <p className="text-slate-400">Choose how you want to get started</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <button
+                onClick={() => setStep('ai')}
+                className="bg-gradient-to-br from-purple-600/30 to-pink-600/30 rounded-2xl p-8 border border-purple-500/50 hover:border-purple-400 transition-all text-left group"
+              >
+                <div className="w-16 h-16 rounded-xl bg-purple-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-8 h-8 text-purple-400" />
+                </div>
+                <h2 className="text-xl font-semibold text-white mb-2">Generate with AI</h2>
+                <p className="text-slate-400">
+                  Describe your website and let hgland Agent build it for you automatically.
+                </p>
+              </button>
+
+              <button
+                onClick={() => setStep('manual')}
+                className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700 hover:border-slate-500 transition-all text-left group"
+              >
+                <div className="w-16 h-16 rounded-xl bg-slate-700/50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Wand2 className="w-8 h-8 text-slate-400" />
+                </div>
+                <h2 className="text-xl font-semibold text-white mb-2">Start from Scratch</h2>
+                <p className="text-slate-400">
+                  Create a blank project and build your website using the visual editor or code.
+                </p>
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 'ai' && (
+          <>
+            <button
+              onClick={() => setStep('choose')}
+              className="flex items-center gap-2 text-slate-400 hover:text-white mb-8"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
+
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-500/20 mb-4">
+                <Sparkles className="w-8 h-8 text-purple-400" />
+              </div>
+              <h1 className="text-3xl font-bold text-white mb-2">Describe Your Website</h1>
+              <p className="text-slate-400">Tell us what you want to build and our AI will create it</p>
+            </div>
+
+            <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700">
+              <textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="Example: A modern portfolio website for a photographer with a gallery, about page, and contact form. Use dark theme with elegant typography."
+                className="w-full h-40 px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+              />
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={handleAIGenerate}
+                  disabled={loading || !aiPrompt.trim()}
+                  className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>Generating...</>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5" />
+                      Generate Website
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                'Landing page for a SaaS startup',
+                'Restaurant website with menu',
+                'Personal blog with dark theme',
+              ].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onClick={() => setAiPrompt(suggestion)}
+                  className="text-left p-4 bg-slate-800/30 rounded-lg border border-slate-700 hover:border-slate-500 text-slate-400 hover:text-white transition-colors text-sm"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {step === 'manual' && (
+          <>
+            <button
+              onClick={() => setStep('choose')}
+              className="flex items-center gap-2 text-slate-400 hover:text-white mb-8"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
+
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-white mb-2">Create New Project</h1>
+              <p className="text-slate-400">Start with a blank canvas</p>
+            </div>
+
+            <form onSubmit={handleManualSubmit} className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Project Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="My Awesome Website"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Description (optional)</label>
+                  <textarea
+                    name="description"
+                    rows={3}
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                    placeholder="A brief description of your website"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end mt-6">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Creating...' : 'Create Project'}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+      </main>
+    </div>
+  );
+}
