@@ -319,11 +319,21 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
         
         if (messagesRes.ok) {
           const msgData = await messagesRes.json();
-          if (msgData.messages) {
-            setChatMessages(msgData.messages.map((m: { role: string; content: string }) => ({
+          if (msgData.messages && msgData.messages.length > 0) {
+            const messages = msgData.messages.map((m: { role: string; content: string }) => ({
               role: m.role as 'user' | 'assistant',
               content: m.content
-            })));
+            }));
+            
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage.role === 'user') {
+              messages.push({
+                role: 'assistant',
+                content: 'Your previous request was interrupted. Please send your message again to continue.'
+              });
+            }
+            
+            setChatMessages(messages);
           }
         }
       } catch {
@@ -442,13 +452,17 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
       version: 'latest',
       installed: true
     };
-    setPackages([...packages, newPackage]);
+    const updated = [...packages, newPackage];
+    setPackages(updated);
+    saveProjectData({ packages: updated });
     setPackageSearch('');
     setInstallingPackage(false);
   }
 
   function removePackage(name: string) {
-    setPackages(packages.filter(p => p.name !== name));
+    const updated = packages.filter(p => p.name !== name);
+    setPackages(updated);
+    saveProjectData({ packages: updated });
   }
 
   async function runTerminalCommand() {
@@ -488,9 +502,24 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   }
 
   function toggleIntegration(integrationId: string) {
-    setIntegrations(integrations.map(i => 
+    const updated = integrations.map(i => 
       i.id === integrationId ? { ...i, enabled: !i.enabled } : i
-    ));
+    );
+    setIntegrations(updated);
+    saveProjectData({ integrations: updated });
+  }
+
+  async function saveProjectData(data: Record<string, unknown>) {
+    if (!project) return;
+    try {
+      await fetch(`/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+    } catch (err) {
+      console.error('Failed to save project:', err);
+    }
   }
 
   async function saveMessage(role: 'user' | 'assistant', content: string) {
@@ -855,23 +884,27 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-cyan-200 mb-2">Page Title</label>
-                  <input type="text" value={seoSettings.title} onChange={(e) => setSeoSettings({...seoSettings, title: e.target.value})} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="My Awesome Website" />
+                  <input type="text" value={seoSettings.title} onChange={(e) => setSeoSettings({...seoSettings, title: e.target.value})} onBlur={() => saveProjectData({ seoSettings })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="My Awesome Website" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-cyan-200 mb-2">Meta Description</label>
-                  <textarea value={seoSettings.description} onChange={(e) => setSeoSettings({...seoSettings, description: e.target.value})} rows={3} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none" placeholder="A brief description of your website..." />
+                  <textarea value={seoSettings.description} onChange={(e) => setSeoSettings({...seoSettings, description: e.target.value})} onBlur={() => saveProjectData({ seoSettings })} rows={3} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none" placeholder="A brief description of your website..." />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-cyan-200 mb-2">Keywords</label>
-                  <input type="text" value={seoSettings.keywords} onChange={(e) => setSeoSettings({...seoSettings, keywords: e.target.value})} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="keyword1, keyword2, keyword3" />
+                  <input type="text" value={seoSettings.keywords} onChange={(e) => setSeoSettings({...seoSettings, keywords: e.target.value})} onBlur={() => saveProjectData({ seoSettings })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="keyword1, keyword2, keyword3" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-cyan-200 mb-2">OG Image URL</label>
-                  <input type="text" value={seoSettings.ogImage} onChange={(e) => setSeoSettings({...seoSettings, ogImage: e.target.value})} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="https://..." />
+                  <input type="text" value={seoSettings.ogImage} onChange={(e) => setSeoSettings({...seoSettings, ogImage: e.target.value})} onBlur={() => saveProjectData({ seoSettings })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="https://..." />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-cyan-200 mb-2">Robots</label>
-                  <select value={seoSettings.robots} onChange={(e) => setSeoSettings({...seoSettings, robots: e.target.value})} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                  <select value={seoSettings.robots} onChange={(e) => {
+                    const updated = {...seoSettings, robots: e.target.value};
+                    setSeoSettings(updated);
+                    saveProjectData({ seoSettings: updated });
+                  }} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
                     <option value="index, follow">Index, Follow</option>
                     <option value="noindex, follow">No Index, Follow</option>
                     <option value="index, nofollow">Index, No Follow</option>
@@ -888,24 +921,38 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-cyan-200 mb-2">RAM: {resources.ram} GB</label>
-                  <input type="range" min="8" max="128" step="8" value={resources.ram} onChange={(e) => setResources({...resources, ram: parseInt(e.target.value)})} className="w-full accent-cyan-500" />
+                  <input type="range" min="8" max="128" step="8" value={resources.ram} onChange={(e) => {
+                    const updated = {...resources, ram: parseInt(e.target.value)};
+                    setResources(updated);
+                  }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
                   <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>8 GB</span><span>128 GB</span></div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-cyan-200 mb-2">CPU Cores: {resources.cpu}</label>
-                  <input type="range" min="1" max="16" value={resources.cpu} onChange={(e) => setResources({...resources, cpu: parseInt(e.target.value)})} className="w-full accent-cyan-500" />
+                  <input type="range" min="1" max="16" value={resources.cpu} onChange={(e) => {
+                    const updated = {...resources, cpu: parseInt(e.target.value)};
+                    setResources(updated);
+                  }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
                   <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>1 core</span><span>16 cores</span></div>
                 </div>
                 <div>
                   <label className="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" checked={resources.gpu} onChange={(e) => setResources({...resources, gpu: e.target.checked})} className="w-5 h-5 accent-cyan-500" />
+                    <input type="checkbox" checked={resources.gpu} onChange={(e) => {
+                      const updated = {...resources, gpu: e.target.checked};
+                      setResources(updated);
+                      saveProjectData({ resources: updated });
+                    }} className="w-5 h-5 accent-cyan-500" />
                     <span className="text-cyan-200">Enable GPU</span>
                   </label>
                 </div>
                 {resources.gpu && (
                   <div>
                     <label className="block text-sm font-medium text-cyan-200 mb-2">GPU Type</label>
-                    <select value={resources.gpuType} onChange={(e) => setResources({...resources, gpuType: e.target.value})} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    <select value={resources.gpuType} onChange={(e) => {
+                      const updated = {...resources, gpuType: e.target.value};
+                      setResources(updated);
+                      saveProjectData({ resources: updated });
+                    }} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
                       <option value="NVIDIA A100">NVIDIA A100 (80GB)</option>
                       <option value="NVIDIA H100">NVIDIA H100 (80GB)</option>
                       <option value="NVIDIA RTX 4090">NVIDIA RTX 4090 (24GB)</option>
@@ -937,7 +984,11 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                         type="password"
                         placeholder="API Key"
                         value={integration.apiKey || ''}
-                        onChange={(e) => setIntegrations(integrations.map(i => i.id === integration.id ? {...i, apiKey: e.target.value} : i))}
+                        onChange={(e) => {
+                          const updated = integrations.map(i => i.id === integration.id ? {...i, apiKey: e.target.value} : i);
+                          setIntegrations(updated);
+                        }}
+                        onBlur={() => saveProjectData({ integrations })}
                         className="mt-3 w-full px-3 py-2 bg-cyan-900/30 border border-cyan-700/50 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500"
                       />
                     )}

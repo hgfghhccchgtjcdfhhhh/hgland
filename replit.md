@@ -1,7 +1,7 @@
 # hgland - AI-Powered Website Builder Platform
 
 ## Overview
-hgland is an AI-powered website builder platform built around a fully autonomous build agent called **hgland Agent**, powered by **GPT-5.2 Codex** via OpenAI Agents SDK (@openai/agents). The platform allows users to create websites through AI generation, drag-and-drop visual editing, or manual code editing.
+hgland is an AI-powered website builder platform built around a fully autonomous build agent called **hgland Agent**, powered by **GPT-5.1 Codex Max** via OpenAI Responses API. The platform allows users to create websites through AI generation, drag-and-drop visual editing, or manual code editing.
 
 ## Design Theme
 The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
@@ -16,7 +16,9 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 - User authentication system (signup/login with JWT)
 - Dashboard for project management
 - Advanced project editor with 8 tabs (Code, Visual, AI, Packages, Terminal, SEO, Resources, Integrations)
-- **AI generation and chat powered by GPT-5.2 Codex using OPENAI_API_KEY**
+- **AI generation and chat powered by GPT-5.1 Codex Max via Responses API using OPENAI_API_KEY**
+- **Auto-persistence for packages, resources, SEO, and integrations**
+- **Interrupted message recovery on reload**
 - Development server running on port 5000
 
 ## Tech Stack
@@ -24,7 +26,7 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 - **Styling**: Tailwind CSS
 - **Database**: PostgreSQL (Replit built-in) with Drizzle ORM
 - **Authentication**: JWT with jose library, bcryptjs for password hashing
-- **AI**: OpenAI GPT-5.2 Codex via @openai/agents SDK
+- **AI**: OpenAI GPT-5.1 Codex Max via Responses API
 - **Runtime**: Node.js 20
 
 ## Project Structure
