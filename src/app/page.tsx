@@ -45,12 +45,9 @@ export default function Home() {
               Build Websites with
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400"> AI Magic</span>
             </h1>
-            <p className="text-xl text-cyan-100/70 mb-4 max-w-2xl mx-auto">
+            <p className="text-xl text-cyan-100/70 mb-10 max-w-2xl mx-auto">
               hgland is an AI-powered website builder that creates stunning websites from a simple description. 
               Go from idea to live website in minutes.
-            </p>
-            <p className="text-sm text-cyan-300/50 mb-10">
-              Style inspired by Tidal Wave - verified by Zoink, former Top 1 Extreme Demon
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

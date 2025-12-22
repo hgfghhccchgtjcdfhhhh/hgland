@@ -33,8 +33,17 @@ export const deployments = pgTable('deployments', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const chatMessages = pgTable('chat_messages', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').references(() => projects.id).notNull(),
+  role: varchar('role', { length: 20 }).notNull(),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 export type Deployment = typeof deployments.$inferSelect;
+export type ChatMessage = typeof chatMessages.$inferSelect;

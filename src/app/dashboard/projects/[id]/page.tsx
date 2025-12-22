@@ -16,8 +16,8 @@ interface Project {
   name: string;
   description: string | null;
   status: string;
-  pages: string | null;
-  siteConfig: string | null;
+  pages: PageContent[] | string | null;
+  siteConfig: unknown;
 }
 
 interface ChatMessage {
@@ -44,27 +44,51 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     async function loadProject() {
       try {
-        const res = await fetch(`/api/projects/${id}`);
-        if (!res.ok) {
+        const [projectRes, messagesRes] = await Promise.all([
+          fetch(`/api/projects/${id}`),
+          fetch(`/api/projects/${id}/messages`)
+        ]);
+        
+        if (!projectRes.ok) {
           router.push('/dashboard');
           return;
         }
-        const data = await res.json();
+        
+        const data = await projectRes.json();
         setProject(data.project);
         
+        let parsedPages: PageContent[] = [];
         if (data.project.pages) {
-          try {
-            const parsedPages = JSON.parse(data.project.pages);
-            if (Array.isArray(parsedPages) && parsedPages.length > 0) {
-              setPages(parsedPages);
-              setCurrentPage(parsedPages[0]);
-              setCode(parsedPages[0].html || '');
+          if (typeof data.project.pages === 'string') {
+            try {
+              parsedPages = JSON.parse(data.project.pages);
+            } catch {
+              parsedPages = [];
             }
-          } catch {
-            setCode('<div class="container">\n  <h1>Welcome to my website</h1>\n  <p>Start building your site!</p>\n</div>');
+          } else if (Array.isArray(data.project.pages)) {
+            parsedPages = data.project.pages;
           }
+        }
+        
+        if (parsedPages.length > 0) {
+          setPages(parsedPages);
+          setCurrentPage(parsedPages[0]);
+          setCode(parsedPages[0].html || '');
         } else {
-          setCode('<div class="container">\n  <h1>Welcome to my website</h1>\n  <p>Start building your site!</p>\n</div>');
+          const defaultPage = { name: 'Home', path: '/', html: '<div class="container">\n  <h1>Welcome to my website</h1>\n  <p>Start building your site!</p>\n</div>' };
+          setPages([defaultPage]);
+          setCurrentPage(defaultPage);
+          setCode(defaultPage.html);
+        }
+        
+        if (messagesRes.ok) {
+          const msgData = await messagesRes.json();
+          if (msgData.messages) {
+            setChatMessages(msgData.messages.map((m: { role: string; content: string }) => ({
+              role: m.role as 'user' | 'assistant',
+              content: m.content
+            })));
+          }
         }
       } catch {
         router.push('/dashboard');
@@ -79,23 +103,34 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     if (!project) return;
     setSaving(true);
     try {
-      const updatedPages = pages.map(p => 
-        p.path === currentPage?.path ? { ...p, html: code } : p
-      );
+      const updatedPages = pages.length > 0 
+        ? pages.map(p => p.path === currentPage?.path ? { ...p, html: code } : p)
+        : [{ name: 'Home', path: '/', html: code }];
       
       await fetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pages: JSON.stringify(updatedPages.length > 0 ? updatedPages : [{ name: 'Home', path: '/', html: code }]),
-        }),
+        body: JSON.stringify({ pages: updatedPages }),
       });
       
-      setPages(updatedPages.length > 0 ? updatedPages : [{ name: 'Home', path: '/', html: code }]);
+      setPages(updatedPages);
     } catch (err) {
       console.error('Save failed:', err);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveMessage(role: 'user' | 'assistant', content: string) {
+    if (!project) return;
+    try {
+      await fetch(`/api/projects/${project.id}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role, content }),
+      });
+    } catch (err) {
+      console.error('Failed to save message:', err);
     }
   }
 
@@ -106,6 +141,8 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setAiPrompt('');
     setGenerating(true);
+    
+    await saveMessage('user', userMessage);
 
     const isGenerateRequest = /\b(generate|create|build|make|add|design)\b.*\b(website|page|section|component|html|code)\b/i.test(userMessage);
 
@@ -127,8 +164,11 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
 
       const data = await res.json();
       
+      let assistantMessage = '';
+      
       if (data.type === 'chat') {
-        setChatMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+        assistantMessage = data.message;
+        setChatMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
       } else if (data.generated?.pages) {
         setPages(data.generated.pages);
         setCurrentPage(data.generated.pages[0]);
@@ -138,22 +178,23 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            pages: JSON.stringify(data.generated.pages),
-            siteConfig: JSON.stringify(data.generated.siteConfig),
+            pages: data.generated.pages,
+            siteConfig: data.generated.siteConfig,
           }),
         });
         
-        setChatMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content: `I've generated your website! Check the Code tab to see the result. The site includes: ${data.generated.pages.map((p: PageContent) => p.name).join(', ')}.`
-        }]);
+        assistantMessage = `I've generated your website! Check the Code tab to see the result. The site includes: ${data.generated.pages.map((p: PageContent) => p.name).join(', ')}.`;
+        setChatMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
+      }
+      
+      if (assistantMessage) {
+        await saveMessage('assistant', assistantMessage);
       }
     } catch (err) {
       console.error('AI error:', err);
-      setChatMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: `Sorry, I encountered an error: ${err instanceof Error ? err.message : 'Unknown error'}. Please try again.`
-      }]);
+      const errorMessage = `Sorry, I encountered an error: ${err instanceof Error ? err.message : 'Unknown error'}. Please try again.`;
+      setChatMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
+      await saveMessage('assistant', errorMessage);
     } finally {
       setGenerating(false);
     }
