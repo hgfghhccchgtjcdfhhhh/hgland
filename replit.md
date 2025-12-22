@@ -92,7 +92,7 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 8. **Integrations**: Google Analytics, Stripe, Auth0, Cloudinary, SendGrid, Twilio, Firebase, Supabase
 
 ### AI Agent Capabilities (Fully Autonomous)
-The hgland Agent (powered by GPT-5.2 Codex) is a fully autonomous agent with 8 tools:
+The hgland Agent (powered by GPT-5.1 Codex Max) is a fully autonomous agent with 6 tools:
 
 **Tools Available:**
 1. **generate_image**: Generate images using gpt-image-1 via Replit AI Integrations

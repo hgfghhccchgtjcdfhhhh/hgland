@@ -404,7 +404,7 @@ Be helpful, creative, and thorough.`;
       iterations++;
 
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5.1-codex-max',
         messages,
         tools,
         tool_choice: 'auto',
