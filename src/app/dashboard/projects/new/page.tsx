@@ -26,7 +26,7 @@ export default function NewProjectPage() {
       const { project } = await res.json();
 
       if (useAI) {
-        setGenerationStatus('Generating website with GPT-5.2 Codex Max...');
+        setGenerationStatus('Generating website with GPT-5.2 Codex...');
         
         const aiRes = await fetch('/api/ai/generate', {
           method: 'POST',
@@ -114,7 +114,7 @@ export default function NewProjectPage() {
                 </div>
                 <h2 className="text-xl font-semibold text-white mb-2">Generate with AI</h2>
                 <p className="text-cyan-300/60">
-                  Describe your website and let hgland Agent (GPT-5.2 Codex Max) build it for you automatically.
+                  Describe your website and let hgland Agent (GPT-5.2 Codex) build it for you automatically.
                 </p>
               </button>
 
@@ -150,7 +150,7 @@ export default function NewProjectPage() {
                 <Sparkles className="w-8 h-8 text-cyan-400" />
               </div>
               <h1 className="text-3xl font-bold text-white mb-2">Describe Your Website</h1>
-              <p className="text-cyan-300/60">Powered by hgland Agent (GPT-5.2 Codex Max)</p>
+              <p className="text-cyan-300/60">Powered by hgland Agent (GPT-5.2 Codex)</p>
             </div>
 
             <div className="bg-cyan-900/30 rounded-2xl p-6 border border-cyan-700/30">

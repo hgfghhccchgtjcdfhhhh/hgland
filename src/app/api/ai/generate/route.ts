@@ -19,12 +19,12 @@ export async function POST(request: NextRequest) {
     if (mode === 'chat') {
       const chatAgent = new Agent({
         name: 'hgland Agent',
-        model: 'gpt-5.2-codex-max',
+        model: 'gpt-5.2-codex',
         instructions: `You are hgland Agent, a helpful AI assistant for the hgland website builder platform. You can have normal conversations with users, answer questions about web development, help them plan their websites, and provide guidance.
 
 When the user wants to generate or modify website code, help them refine their requirements first through conversation. Only generate code when they explicitly ask for it or when you're confident they want to build something.
 
-Be friendly, helpful, and conversational. You were built by hgland and powered by GPT-5.2 Codex Max.`,
+Be friendly, helpful, and conversational. You were built by hgland and powered by GPT-5.2 Codex.`,
       });
 
       const result = await run(chatAgent, prompt);
@@ -38,8 +38,8 @@ Be friendly, helpful, and conversational. You were built by hgland and powered b
 
     const websiteBuilderAgent = new Agent({
       name: 'hgland Agent',
-      model: 'gpt-5.2-codex-max',
-      instructions: `You are hgland Agent, an AI-powered website builder agent powered by GPT-5.2 Codex Max. Your task is to generate complete, production-ready website code based on user descriptions.
+      model: 'gpt-5.2-codex',
+      instructions: `You are hgland Agent, an AI-powered website builder agent powered by GPT-5.2 Codex. Your task is to generate complete, production-ready website code based on user descriptions.
 
 When generating websites:
 1. Create clean, modern HTML with semantic markup
