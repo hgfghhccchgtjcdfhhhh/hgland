@@ -101,16 +101,16 @@ const editFileTool = tool({
   parameters: z.object({
     fileId: z.string().describe('ID of the file to edit'),
     newContent: z.string().describe('New content for the file'),
-    filename: z.string().optional().describe('New filename if renaming'),
+    newFilename: z.string().default('').describe('New filename if renaming the file, leave empty to keep current name'),
   }),
-  execute: async ({ fileId, newContent, filename }) => {
+  execute: async ({ fileId, newContent, newFilename }) => {
     return {
       success: true,
       action: 'edit_file',
       fileId,
       newContent,
-      newFilename: filename,
-      message: `Edited file${filename ? ` and renamed to ${filename}` : ''}`,
+      newFilename: newFilename || undefined,
+      message: `Edited file${newFilename ? ` and renamed to ${newFilename}` : ''}`,
     };
   },
 });
