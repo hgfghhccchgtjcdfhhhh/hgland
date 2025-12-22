@@ -1,7 +1,7 @@
 # hgland - AI-Powered Website Builder Platform
 
 ## Overview
-hgland is an AI-powered website builder platform built around a fully autonomous build agent called **hgland Agent**, powered by **GPT-5.1 Codex Max** via OpenAI Agents SDK (@openai/agents). The platform allows users to create websites through AI generation, drag-and-drop visual editing, or manual code editing.
+hgland is an AI-powered website builder platform built around a fully autonomous build agent called **hgland Agent**, powered by **GPT-5.2 Codex Max** via OpenAI Agents SDK (@openai/agents). The platform allows users to create websites through AI generation, drag-and-drop visual editing, or manual code editing.
 
 ## Design Theme
 The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
@@ -16,7 +16,7 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 - User authentication system (signup/login with JWT)
 - Dashboard for project management
 - Advanced project editor with 8 tabs (Code, Visual, AI, Packages, Terminal, SEO, Resources, Integrations)
-- **AI generation and chat powered by GPT-5.1 Codex Max using OPENAI_API_KEY**
+- **AI generation and chat powered by GPT-5.2 Codex Max using OPENAI_API_KEY**
 - Development server running on port 5000
 
 ## Tech Stack
@@ -24,7 +24,7 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 - **Styling**: Tailwind CSS
 - **Database**: PostgreSQL (Replit built-in) with Drizzle ORM
 - **Authentication**: JWT with jose library, bcryptjs for password hashing
-- **AI**: OpenAI GPT-5.1 Codex Max via @openai/agents SDK
+- **AI**: OpenAI GPT-5.2 Codex Max via @openai/agents SDK
 - **Runtime**: Node.js 20
 
 ## Project Structure
@@ -84,7 +84,7 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 ### Project Editor (8 Tabs)
 1. **Code Editor**: File tree with multiple files/folders, code editing with live preview
 2. **Visual Editor**: Component palette (drag-and-drop coming soon)
-3. **AI Assistant**: Chat with GPT-5.1 Codex Max, conversation history saves
+3. **AI Assistant**: Chat with GPT-5.2 Codex Max, conversation history saves
 4. **Package Manager**: Install/uninstall npm packages
 5. **Terminal**: Run shell commands
 6. **SEO Settings**: Title, description, keywords, OG image, robots
@@ -92,7 +92,7 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 8. **Integrations**: Google Analytics, Stripe, Auth0, Cloudinary, SendGrid, Twilio, Firebase, Supabase
 
 ### AI Agent Capabilities
-The hgland Agent (powered by GPT-5.1 Codex Max) can:
+The hgland Agent (powered by GPT-5.2 Codex Max) can:
 - Have normal conversations with users
 - Generate complete website HTML from natural language descriptions
 - Create responsive, modern designs with Tailwind CSS
@@ -110,5 +110,5 @@ The hgland Agent (powered by GPT-5.1 Codex Max) can:
 - Deployment target: autoscale
 
 ## Environment Variables
-- **OPENAI_API_KEY**: Required for AI generation (GPT-5.1 Codex Max)
+- **OPENAI_API_KEY**: Required for AI generation (GPT-5.2 Codex Max)
 - **DATABASE_URL**: PostgreSQL connection string (auto-configured)
