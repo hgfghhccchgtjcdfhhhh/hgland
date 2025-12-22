@@ -20,6 +20,12 @@ export const projects = pgTable('projects', {
   status: varchar('status', { length: 50 }).default('draft').notNull(),
   siteConfig: jsonb('site_config'),
   pages: jsonb('pages'),
+  files: jsonb('files'),
+  packages: jsonb('packages'),
+  seoSettings: jsonb('seo_settings'),
+  resources: jsonb('resources'),
+  integrations: jsonb('integrations'),
+  terminalHistory: jsonb('terminal_history'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

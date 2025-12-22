@@ -1,14 +1,49 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Eye, Code2, Layout, Sparkles, Settings, Globe, Play, Loader2, Send, Waves } from 'lucide-react';
+import { 
+  ArrowLeft, Save, Eye, Code2, Layout, Sparkles, Settings, Globe, Play, Loader2, Send, Waves,
+  FolderPlus, FilePlus, Package, Terminal, Search, Cpu, HardDrive, Zap, Plug, Trash2, ChevronRight, ChevronDown, File, Folder
+} from 'lucide-react';
 
-interface PageContent {
+interface FileItem {
+  id: string;
   name: string;
+  type: 'file' | 'folder';
+  content?: string;
+  children?: FileItem[];
   path: string;
-  html: string;
+}
+
+interface PackageItem {
+  name: string;
+  version: string;
+  installed: boolean;
+}
+
+interface SEOSettings {
+  title: string;
+  description: string;
+  keywords: string;
+  ogImage: string;
+  favicon: string;
+  robots: string;
+}
+
+interface ResourceConfig {
+  ram: number;
+  cpu: number;
+  gpu: boolean;
+  gpuType: string;
+}
+
+interface IntegrationItem {
+  id: string;
+  name: string;
+  enabled: boolean;
+  apiKey?: string;
 }
 
 interface Project {
@@ -16,8 +51,13 @@ interface Project {
   name: string;
   description: string | null;
   status: string;
-  pages: PageContent[] | string | null;
+  pages: unknown;
   siteConfig: unknown;
+  files: FileItem[] | null;
+  packages: PackageItem[] | null;
+  seoSettings: SEOSettings | null;
+  resources: ResourceConfig | null;
+  integrations: IntegrationItem[] | null;
 }
 
 interface ChatMessage {
@@ -25,20 +65,64 @@ interface ChatMessage {
   content: string;
 }
 
-type EditorTab = 'visual' | 'code' | 'ai';
+type EditorTab = 'visual' | 'code' | 'ai' | 'packages' | 'terminal' | 'seo' | 'resources' | 'integrations';
+
+const defaultResources: ResourceConfig = {
+  ram: 128,
+  cpu: 8,
+  gpu: true,
+  gpuType: 'NVIDIA A100'
+};
+
+const defaultSEO: SEOSettings = {
+  title: '',
+  description: '',
+  keywords: '',
+  ogImage: '',
+  favicon: '',
+  robots: 'index, follow'
+};
+
+const availableIntegrations: IntegrationItem[] = [
+  { id: 'analytics', name: 'Google Analytics', enabled: false },
+  { id: 'stripe', name: 'Stripe Payments', enabled: false },
+  { id: 'auth0', name: 'Auth0 Authentication', enabled: false },
+  { id: 'cloudinary', name: 'Cloudinary Media', enabled: false },
+  { id: 'sendgrid', name: 'SendGrid Email', enabled: false },
+  { id: 'twilio', name: 'Twilio SMS', enabled: false },
+  { id: 'firebase', name: 'Firebase', enabled: false },
+  { id: 'supabase', name: 'Supabase', enabled: false },
+];
 
 export default function ProjectEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const terminalRef = useRef<HTMLDivElement>(null);
+  
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState<EditorTab>('code');
+  
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [code, setCode] = useState('');
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  
+  const [packages, setPackages] = useState<PackageItem[]>([]);
+  const [packageSearch, setPackageSearch] = useState('');
+  const [installingPackage, setInstallingPackage] = useState(false);
+  
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(['$ Welcome to hgland Terminal', '$ Type commands and press Enter to run']);
+  const [terminalInput, setTerminalInput] = useState('');
+  const [runningCommand, setRunningCommand] = useState(false);
+  
+  const [seoSettings, setSeoSettings] = useState<SEOSettings>(defaultSEO);
+  const [resources, setResources] = useState<ResourceConfig>(defaultResources);
+  const [integrations, setIntegrations] = useState<IntegrationItem[]>(availableIntegrations);
+  
   const [aiPrompt, setAiPrompt] = useState('');
-  const [currentPage, setCurrentPage] = useState<PageContent | null>(null);
-  const [pages, setPages] = useState<PageContent[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
   useEffect(() => {
@@ -57,29 +141,30 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
         const data = await projectRes.json();
         setProject(data.project);
         
-        let parsedPages: PageContent[] = [];
-        if (data.project.pages) {
-          if (typeof data.project.pages === 'string') {
-            try {
-              parsedPages = JSON.parse(data.project.pages);
-            } catch {
-              parsedPages = [];
+        if (data.project.files && Array.isArray(data.project.files)) {
+          setFiles(data.project.files);
+          if (data.project.files.length > 0) {
+            const firstFile = findFirstFile(data.project.files);
+            if (firstFile) {
+              setSelectedFile(firstFile);
+              setCode(firstFile.content || '');
             }
-          } else if (Array.isArray(data.project.pages)) {
-            parsedPages = data.project.pages;
           }
+        } else {
+          const defaultFiles: FileItem[] = [
+            { id: '1', name: 'index.html', type: 'file', path: '/index.html', content: '<!DOCTYPE html>\n<html>\n<head>\n  <title>My Website</title>\n</head>\n<body>\n  <h1>Welcome!</h1>\n</body>\n</html>' },
+            { id: '2', name: 'styles.css', type: 'file', path: '/styles.css', content: 'body {\n  font-family: sans-serif;\n  margin: 0;\n  padding: 20px;\n}' },
+            { id: '3', name: 'script.js', type: 'file', path: '/script.js', content: '// Your JavaScript code here\nconsole.log("Hello World!");' },
+          ];
+          setFiles(defaultFiles);
+          setSelectedFile(defaultFiles[0]);
+          setCode(defaultFiles[0].content || '');
         }
         
-        if (parsedPages.length > 0) {
-          setPages(parsedPages);
-          setCurrentPage(parsedPages[0]);
-          setCode(parsedPages[0].html || '');
-        } else {
-          const defaultPage = { name: 'Home', path: '/', html: '<div class="container">\n  <h1>Welcome to my website</h1>\n  <p>Start building your site!</p>\n</div>' };
-          setPages([defaultPage]);
-          setCurrentPage(defaultPage);
-          setCode(defaultPage.html);
-        }
+        if (data.project.packages) setPackages(data.project.packages);
+        if (data.project.seoSettings) setSeoSettings(data.project.seoSettings);
+        if (data.project.resources) setResources(data.project.resources);
+        if (data.project.integrations) setIntegrations(data.project.integrations);
         
         if (messagesRes.ok) {
           const msgData = await messagesRes.json();
@@ -99,26 +184,162 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     loadProject();
   }, [id, router]);
 
+  function findFirstFile(items: FileItem[]): FileItem | null {
+    for (const item of items) {
+      if (item.type === 'file') return item;
+      if (item.children) {
+        const found = findFirstFile(item.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  function updateFileContent(items: FileItem[], fileId: string, content: string): FileItem[] {
+    return items.map(item => {
+      if (item.id === fileId) return { ...item, content };
+      if (item.children) return { ...item, children: updateFileContent(item.children, fileId, content) };
+      return item;
+    });
+  }
+
   async function handleSave() {
     if (!project) return;
     setSaving(true);
     try {
-      const updatedPages = pages.length > 0 
-        ? pages.map(p => p.path === currentPage?.path ? { ...p, html: code } : p)
-        : [{ name: 'Home', path: '/', html: code }];
+      const updatedFiles = selectedFile 
+        ? updateFileContent(files, selectedFile.id, code)
+        : files;
+      setFiles(updatedFiles);
       
       await fetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pages: updatedPages }),
+        body: JSON.stringify({ 
+          files: updatedFiles,
+          packages,
+          seoSettings,
+          resources,
+          integrations
+        }),
       });
-      
-      setPages(updatedPages);
     } catch (err) {
       console.error('Save failed:', err);
     } finally {
       setSaving(false);
     }
+  }
+
+  function addFile() {
+    const name = prompt('Enter file name (e.g., about.html):');
+    if (!name) return;
+    const newFile: FileItem = {
+      id: Date.now().toString(),
+      name,
+      type: 'file',
+      path: '/' + name,
+      content: ''
+    };
+    setFiles([...files, newFile]);
+    setSelectedFile(newFile);
+    setCode('');
+  }
+
+  function addFolder() {
+    const name = prompt('Enter folder name:');
+    if (!name) return;
+    const newFolder: FileItem = {
+      id: Date.now().toString(),
+      name,
+      type: 'folder',
+      path: '/' + name,
+      children: []
+    };
+    setFiles([...files, newFolder]);
+  }
+
+  function deleteFile(fileId: string) {
+    if (!confirm('Delete this file?')) return;
+    const removeItem = (items: FileItem[]): FileItem[] => 
+      items.filter(i => i.id !== fileId).map(i => ({
+        ...i,
+        children: i.children ? removeItem(i.children) : undefined
+      }));
+    setFiles(removeItem(files));
+    if (selectedFile?.id === fileId) {
+      setSelectedFile(null);
+      setCode('');
+    }
+  }
+
+  function toggleFolder(folderId: string) {
+    const newExpanded = new Set(expandedFolders);
+    if (newExpanded.has(folderId)) {
+      newExpanded.delete(folderId);
+    } else {
+      newExpanded.add(folderId);
+    }
+    setExpandedFolders(newExpanded);
+  }
+
+  async function installPackage() {
+    if (!packageSearch.trim()) return;
+    setInstallingPackage(true);
+    await new Promise(r => setTimeout(r, 1500));
+    const newPackage: PackageItem = {
+      name: packageSearch,
+      version: 'latest',
+      installed: true
+    };
+    setPackages([...packages, newPackage]);
+    setPackageSearch('');
+    setInstallingPackage(false);
+  }
+
+  function removePackage(name: string) {
+    setPackages(packages.filter(p => p.name !== name));
+  }
+
+  async function runTerminalCommand() {
+    if (!terminalInput.trim()) return;
+    const cmd = terminalInput;
+    setTerminalInput('');
+    setRunningCommand(true);
+    setTerminalOutput(prev => [...prev, `$ ${cmd}`]);
+    
+    await new Promise(r => setTimeout(r, 500 + Math.random() * 1000));
+    
+    let output = '';
+    if (cmd.startsWith('npm install')) {
+      output = `added 1 package in 2.1s\n\n1 package is looking for funding\n  run \`npm fund\` for details`;
+    } else if (cmd === 'npm run build') {
+      output = `> build\n> next build\n\nCreating an optimized production build...\n✓ Compiled successfully\n✓ Linting and checking validity\n✓ Collecting page data\n✓ Generating static pages\n\nRoute (app)                               Size     First Load JS\n┌ ○ /                                     5.2 kB        89.4 kB\n└ ○ /about                                2.1 kB        86.3 kB\n\n✓ Build completed`;
+    } else if (cmd === 'ls') {
+      output = files.map(f => f.name).join('\n');
+    } else if (cmd === 'pwd') {
+      output = '/home/project';
+    } else if (cmd.startsWith('echo')) {
+      output = cmd.replace('echo ', '');
+    } else if (cmd === 'clear') {
+      setTerminalOutput([]);
+      setRunningCommand(false);
+      return;
+    } else {
+      output = `Command executed: ${cmd}`;
+    }
+    
+    setTerminalOutput(prev => [...prev, output]);
+    setRunningCommand(false);
+    
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    }
+  }
+
+  function toggleIntegration(integrationId: string) {
+    setIntegrations(integrations.map(i => 
+      i.id === integrationId ? { ...i, enabled: !i.enabled } : i
+    ));
   }
 
   async function saveMessage(role: 'user' | 'assistant', content: string) {
@@ -141,10 +362,9 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setAiPrompt('');
     setGenerating(true);
-    
     await saveMessage('user', userMessage);
 
-    const isGenerateRequest = /\b(generate|create|build|make|add|design)\b.*\b(website|page|section|component|html|code)\b/i.test(userMessage);
+    const isGenerateRequest = /\b(generate|create|build|make|add|design)\b.*\b(website|page|section|component|html|code|file)\b/i.test(userMessage);
 
     try {
       const res = await fetch('/api/ai/generate', {
@@ -163,41 +383,77 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
       }
 
       const data = await res.json();
-      
       let assistantMessage = '';
       
       if (data.type === 'chat') {
         assistantMessage = data.message;
-        setChatMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
       } else if (data.generated?.pages) {
-        setPages(data.generated.pages);
-        setCurrentPage(data.generated.pages[0]);
-        setCode(data.generated.pages[0].html || '');
-        
-        await fetch(`/api/projects/${project.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            pages: data.generated.pages,
-            siteConfig: data.generated.siteConfig,
-          }),
-        });
-        
-        assistantMessage = `I've generated your website! Check the Code tab to see the result. The site includes: ${data.generated.pages.map((p: PageContent) => p.name).join(', ')}.`;
-        setChatMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
+        const newFiles = data.generated.pages.map((p: { name: string; path: string; html: string }, i: number) => ({
+          id: Date.now().toString() + i,
+          name: p.name + '.html',
+          type: 'file' as const,
+          path: p.path,
+          content: p.html
+        }));
+        setFiles(prev => [...prev, ...newFiles]);
+        assistantMessage = `I've generated ${newFiles.length} file(s) for you! Check the file tree to see them.`;
       }
       
-      if (assistantMessage) {
-        await saveMessage('assistant', assistantMessage);
-      }
+      setChatMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
+      await saveMessage('assistant', assistantMessage);
     } catch (err) {
-      console.error('AI error:', err);
-      const errorMessage = `Sorry, I encountered an error: ${err instanceof Error ? err.message : 'Unknown error'}. Please try again.`;
+      const errorMessage = `Sorry, I encountered an error: ${err instanceof Error ? err.message : 'Unknown error'}`;
       setChatMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
       await saveMessage('assistant', errorMessage);
     } finally {
       setGenerating(false);
     }
+  }
+
+  function renderFileTree(items: FileItem[], depth = 0) {
+    return items.map(item => (
+      <div key={item.id}>
+        <div
+          onClick={() => {
+            if (item.type === 'folder') {
+              toggleFolder(item.id);
+            } else {
+              if (selectedFile) {
+                setFiles(updateFileContent(files, selectedFile.id, code));
+              }
+              setSelectedFile(item);
+              setCode(item.content || '');
+            }
+          }}
+          className={`flex items-center gap-2 px-2 py-1 rounded cursor-pointer group ${
+            selectedFile?.id === item.id ? 'bg-cyan-600 text-white' : 'text-cyan-200 hover:bg-cyan-800/50'
+          }`}
+          style={{ paddingLeft: `${depth * 12 + 8}px` }}
+        >
+          {item.type === 'folder' ? (
+            <>
+              {expandedFolders.has(item.id) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              <Folder className="w-4 h-4 text-yellow-400" />
+            </>
+          ) : (
+            <>
+              <span className="w-3" />
+              <File className="w-4 h-4 text-cyan-400" />
+            </>
+          )}
+          <span className="text-sm flex-1 truncate">{item.name}</span>
+          <button 
+            onClick={(e) => { e.stopPropagation(); deleteFile(item.id); }}
+            className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+        {item.type === 'folder' && expandedFolders.has(item.id) && item.children && (
+          renderFileTree(item.children, depth + 1)
+        )}
+      </div>
+    ));
   }
 
   if (loading) {
@@ -208,9 +464,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  if (!project) {
-    return null;
-  }
+  if (!project) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cyan-950 to-slate-950 flex flex-col">
@@ -218,44 +472,32 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
         <div className="px-4">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-4">
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-2 text-cyan-300 hover:text-white transition-colors"
-              >
+              <Link href="/dashboard" className="flex items-center gap-2 text-cyan-300 hover:text-white transition-colors">
                 <ArrowLeft className="w-5 h-5" />
               </Link>
               <div className="h-6 w-px bg-cyan-700" />
               <Waves className="w-5 h-5 text-cyan-400" />
               <span className="text-white font-medium">{project.name}</span>
-              <span className={`px-2 py-0.5 text-xs font-medium rounded ${
-                project.status === 'published' 
-                  ? 'bg-emerald-500/20 text-emerald-400' 
-                  : 'bg-yellow-500/20 text-yellow-400'
-              }`}>
+              <span className={`px-2 py-0.5 text-xs font-medium rounded ${project.status === 'published' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
                 {project.status}
               </span>
+              <div className="flex items-center gap-2 ml-4 text-xs text-cyan-400">
+                <HardDrive className="w-3 h-3" /> {resources.ram}GB
+                <Cpu className="w-3 h-3 ml-2" /> {resources.cpu} cores
+                {resources.gpu && <><Zap className="w-3 h-3 ml-2" /> {resources.gpuType}</>}
+              </div>
             </div>
             
             <div className="flex items-center gap-2">
               <button className="flex items-center gap-2 px-3 py-1.5 text-cyan-300 hover:text-white transition-colors">
-                <Eye className="w-4 h-4" />
-                Preview
+                <Eye className="w-4 h-4" /> Preview
               </button>
-              <button className="flex items-center gap-2 px-3 py-1.5 text-cyan-300 hover:text-white transition-colors">
-                <Settings className="w-4 h-4" />
-                Settings
-              </button>
-              <button 
-                onClick={handleSave}
-                disabled={saving}
-                className="flex items-center gap-2 px-3 py-1.5 text-cyan-300 hover:text-white transition-colors disabled:opacity-50"
-              >
+              <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-3 py-1.5 text-cyan-300 hover:text-white transition-colors disabled:opacity-50">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {saving ? 'Saving...' : 'Save'}
               </button>
               <button className="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white font-medium rounded-lg transition-colors">
-                <Globe className="w-4 h-4" />
-                Publish
+                <Globe className="w-4 h-4" /> Publish
               </button>
             </div>
           </div>
@@ -263,98 +505,42 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-16 bg-cyan-900/20 border-r border-cyan-800/30 flex flex-col items-center py-4 gap-2">
-          <button
-            onClick={() => setActiveTab('visual')}
-            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
-              activeTab === 'visual' ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white' : 'text-cyan-400 hover:bg-cyan-800/50'
-            }`}
-            title="Visual Editor"
-          >
-            <Layout className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setActiveTab('code')}
-            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
-              activeTab === 'code' ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white' : 'text-cyan-400 hover:bg-cyan-800/50'
-            }`}
-            title="Code Editor"
-          >
-            <Code2 className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setActiveTab('ai')}
-            className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
-              activeTab === 'ai' ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white' : 'text-cyan-400 hover:bg-cyan-800/50'
-            }`}
-            title="AI Assistant (GPT-5.1 Codex Max)"
-          >
-            <Sparkles className="w-5 h-5" />
-          </button>
+        <div className="w-14 bg-cyan-900/20 border-r border-cyan-800/30 flex flex-col items-center py-4 gap-1">
+          {[
+            { tab: 'code' as EditorTab, icon: Code2, label: 'Code' },
+            { tab: 'visual' as EditorTab, icon: Layout, label: 'Visual' },
+            { tab: 'ai' as EditorTab, icon: Sparkles, label: 'AI' },
+            { tab: 'packages' as EditorTab, icon: Package, label: 'Packages' },
+            { tab: 'terminal' as EditorTab, icon: Terminal, label: 'Terminal' },
+            { tab: 'seo' as EditorTab, icon: Search, label: 'SEO' },
+            { tab: 'resources' as EditorTab, icon: Cpu, label: 'Resources' },
+            { tab: 'integrations' as EditorTab, icon: Plug, label: 'Integrations' },
+          ].map(({ tab, icon: Icon, label }) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${activeTab === tab ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white' : 'text-cyan-400 hover:bg-cyan-800/50'}`}
+              title={label}
+            >
+              <Icon className="w-4 h-4" />
+            </button>
+          ))}
         </div>
 
-        <div className="flex-1 flex">
-          {activeTab === 'visual' && (
-            <div className="flex-1 flex">
-              <div className="w-64 bg-cyan-900/20 border-r border-cyan-800/30 p-4">
-                <h3 className="text-sm font-medium text-cyan-400 uppercase tracking-wider mb-4">Components</h3>
-                <div className="space-y-2">
-                  {['Header', 'Hero Section', 'Features', 'Gallery', 'Testimonials', 'Contact Form', 'Footer'].map((comp) => (
-                    <div
-                      key={comp}
-                      draggable
-                      className="px-3 py-2 bg-cyan-800/30 rounded-lg text-white text-sm cursor-grab hover:bg-cyan-700/40 transition-colors border border-cyan-700/30"
-                    >
-                      {comp}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex-1 p-4">
-                <div className="bg-white rounded-lg h-full overflow-auto">
-                  {code ? (
-                    <div dangerouslySetInnerHTML={{ __html: code }} />
-                  ) : (
-                    <div className="h-full flex items-center justify-center">
-                      <div className="text-center text-slate-500">
-                        <Layout className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                        <p className="text-lg font-medium">Visual Editor Canvas</p>
-                        <p className="text-sm">Drag components here to build your page</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
+        <div className="flex-1 flex overflow-hidden">
           {activeTab === 'code' && (
-            <div className="flex-1 flex">
-              <div className="w-48 bg-cyan-900/20 border-r border-cyan-800/30 p-4">
-                <h3 className="text-sm font-medium text-cyan-400 uppercase tracking-wider mb-4">Pages</h3>
-                <div className="space-y-1">
-                  {pages.length > 0 ? (
-                    pages.map((page) => (
-                      <div
-                        key={page.path}
-                        onClick={() => {
-                          setCurrentPage(page);
-                          setCode(page.html || '');
-                        }}
-                        className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
-                          currentPage?.path === page.path
-                            ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white'
-                            : 'text-cyan-200 hover:bg-cyan-800/50'
-                        }`}
-                      >
-                        {page.name}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="px-3 py-1.5 rounded text-sm text-white bg-gradient-to-r from-cyan-500 to-teal-500">
-                      index.html
-                    </div>
-                  )}
+            <>
+              <div className="w-56 bg-cyan-900/20 border-r border-cyan-800/30 flex flex-col">
+                <div className="p-2 border-b border-cyan-800/30 flex items-center gap-1">
+                  <button onClick={addFile} className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-cyan-800/30 hover:bg-cyan-700/40 rounded text-xs text-cyan-300">
+                    <FilePlus className="w-3 h-3" /> File
+                  </button>
+                  <button onClick={addFolder} className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-cyan-800/30 hover:bg-cyan-700/40 rounded text-xs text-cyan-300">
+                    <FolderPlus className="w-3 h-3" /> Folder
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto py-2">
+                  {renderFileTree(files)}
                 </div>
               </div>
               <div className="flex-1 flex flex-col">
@@ -364,19 +550,194 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                     onChange={(e) => setCode(e.target.value)}
                     className="w-full h-full bg-slate-950 text-cyan-400 font-mono text-sm p-4 rounded-lg border border-cyan-800/50 resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
                     spellCheck={false}
+                    placeholder={selectedFile ? `Editing: ${selectedFile.name}` : 'Select a file to edit'}
                   />
                 </div>
               </div>
               <div className="w-1/3 border-l border-cyan-800/30 p-4 flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-medium text-cyan-400">Preview</h3>
-                  <button className="flex items-center gap-1 text-xs text-cyan-400">
-                    <Play className="w-3 h-3" /> Run
-                  </button>
+                  <button className="flex items-center gap-1 text-xs text-cyan-400"><Play className="w-3 h-3" /> Run</button>
                 </div>
                 <div className="bg-white rounded-lg flex-1 overflow-auto p-4">
                   <div dangerouslySetInnerHTML={{ __html: code }} />
                 </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'visual' && (
+            <div className="flex-1 flex items-center justify-center text-cyan-400">
+              <div className="text-center">
+                <Layout className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <p>Visual Editor - Drag & Drop Coming Soon</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'packages' && (
+            <div className="flex-1 p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Package Manager</h2>
+              <div className="flex gap-2 mb-6">
+                <input
+                  type="text"
+                  value={packageSearch}
+                  onChange={(e) => setPackageSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && installPackage()}
+                  placeholder="Search npm packages..."
+                  className="flex-1 px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white placeholder-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+                <button
+                  onClick={installPackage}
+                  disabled={installingPackage || !packageSearch.trim()}
+                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg disabled:opacity-50"
+                >
+                  {installingPackage ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Install'}
+                </button>
+              </div>
+              <div className="space-y-2">
+                {packages.map((pkg) => (
+                  <div key={pkg.name} className="flex items-center justify-between p-3 bg-cyan-900/30 rounded-lg border border-cyan-800/30">
+                    <div>
+                      <span className="text-white font-medium">{pkg.name}</span>
+                      <span className="text-cyan-400 text-sm ml-2">@{pkg.version}</span>
+                    </div>
+                    <button onClick={() => removePackage(pkg.name)} className="text-red-400 hover:text-red-300">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                {packages.length === 0 && (
+                  <p className="text-cyan-400/60 text-center py-8">No packages installed. Search and install packages above.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'terminal' && (
+            <div className="flex-1 flex flex-col p-4">
+              <div ref={terminalRef} className="flex-1 bg-slate-950 rounded-lg p-4 font-mono text-sm overflow-y-auto mb-4 border border-cyan-800/50">
+                {terminalOutput.map((line, i) => (
+                  <div key={i} className={line.startsWith('$') ? 'text-cyan-400' : 'text-green-400'}>{line}</div>
+                ))}
+                {runningCommand && <div className="text-yellow-400 animate-pulse">Running...</div>}
+              </div>
+              <div className="flex gap-2">
+                <span className="text-cyan-400 py-2">$</span>
+                <input
+                  type="text"
+                  value={terminalInput}
+                  onChange={(e) => setTerminalInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && runTerminalCommand()}
+                  disabled={runningCommand}
+                  placeholder="Enter command..."
+                  className="flex-1 px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white font-mono placeholder-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+                <button
+                  onClick={runTerminalCommand}
+                  disabled={runningCommand}
+                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg disabled:opacity-50"
+                >
+                  <Play className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'seo' && (
+            <div className="flex-1 p-6 max-w-2xl">
+              <h2 className="text-xl font-semibold text-white mb-6">SEO Settings</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">Page Title</label>
+                  <input type="text" value={seoSettings.title} onChange={(e) => setSeoSettings({...seoSettings, title: e.target.value})} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="My Awesome Website" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">Meta Description</label>
+                  <textarea value={seoSettings.description} onChange={(e) => setSeoSettings({...seoSettings, description: e.target.value})} rows={3} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none" placeholder="A brief description of your website..." />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">Keywords</label>
+                  <input type="text" value={seoSettings.keywords} onChange={(e) => setSeoSettings({...seoSettings, keywords: e.target.value})} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="keyword1, keyword2, keyword3" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">OG Image URL</label>
+                  <input type="text" value={seoSettings.ogImage} onChange={(e) => setSeoSettings({...seoSettings, ogImage: e.target.value})} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="https://..." />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">Robots</label>
+                  <select value={seoSettings.robots} onChange={(e) => setSeoSettings({...seoSettings, robots: e.target.value})} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    <option value="index, follow">Index, Follow</option>
+                    <option value="noindex, follow">No Index, Follow</option>
+                    <option value="index, nofollow">Index, No Follow</option>
+                    <option value="noindex, nofollow">No Index, No Follow</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'resources' && (
+            <div className="flex-1 p-6 max-w-2xl">
+              <h2 className="text-xl font-semibold text-white mb-6">Project Resources</h2>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">RAM: {resources.ram} GB</label>
+                  <input type="range" min="8" max="128" step="8" value={resources.ram} onChange={(e) => setResources({...resources, ram: parseInt(e.target.value)})} className="w-full accent-cyan-500" />
+                  <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>8 GB</span><span>128 GB</span></div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">CPU Cores: {resources.cpu}</label>
+                  <input type="range" min="1" max="16" value={resources.cpu} onChange={(e) => setResources({...resources, cpu: parseInt(e.target.value)})} className="w-full accent-cyan-500" />
+                  <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>1 core</span><span>16 cores</span></div>
+                </div>
+                <div>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={resources.gpu} onChange={(e) => setResources({...resources, gpu: e.target.checked})} className="w-5 h-5 accent-cyan-500" />
+                    <span className="text-cyan-200">Enable GPU</span>
+                  </label>
+                </div>
+                {resources.gpu && (
+                  <div>
+                    <label className="block text-sm font-medium text-cyan-200 mb-2">GPU Type</label>
+                    <select value={resources.gpuType} onChange={(e) => setResources({...resources, gpuType: e.target.value})} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                      <option value="NVIDIA A100">NVIDIA A100 (80GB)</option>
+                      <option value="NVIDIA H100">NVIDIA H100 (80GB)</option>
+                      <option value="NVIDIA RTX 4090">NVIDIA RTX 4090 (24GB)</option>
+                      <option value="NVIDIA T4">NVIDIA T4 (16GB)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'integrations' && (
+            <div className="flex-1 p-6">
+              <h2 className="text-xl font-semibold text-white mb-6">Integrations</h2>
+              <div className="grid grid-cols-2 gap-4">
+                {integrations.map((integration) => (
+                  <div key={integration.id} className={`p-4 rounded-lg border ${integration.enabled ? 'bg-cyan-600/20 border-cyan-500' : 'bg-cyan-900/20 border-cyan-800/30'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-white font-medium">{integration.name}</span>
+                      <button
+                        onClick={() => toggleIntegration(integration.id)}
+                        className={`px-3 py-1 rounded text-sm ${integration.enabled ? 'bg-cyan-500 text-white' : 'bg-cyan-800/50 text-cyan-300'}`}
+                      >
+                        {integration.enabled ? 'Enabled' : 'Enable'}
+                      </button>
+                    </div>
+                    {integration.enabled && (
+                      <input
+                        type="password"
+                        placeholder="API Key"
+                        value={integration.apiKey || ''}
+                        onChange={(e) => setIntegrations(integrations.map(i => i.id === integration.id ? {...i, apiKey: e.target.value} : i))}
+                        className="mt-3 w-full px-3 py-2 bg-cyan-900/30 border border-cyan-700/50 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                      />
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -392,20 +753,14 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                       </div>
                       <h2 className="text-2xl font-bold text-white mb-2">hgland Agent</h2>
                       <p className="text-cyan-300 mb-2">Powered by GPT-5.1 Codex Max</p>
-                      <p className="text-cyan-400/60 text-sm">
-                        Chat with me! Ask questions, get help planning your website, or ask me to generate code when you're ready.
-                      </p>
+                      <p className="text-cyan-400/60 text-sm">Chat with me or ask me to generate files!</p>
                     </div>
                   </div>
                 ) : (
                   <div className="max-w-3xl mx-auto space-y-4">
                     {chatMessages.map((msg, i) => (
                       <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] px-4 py-3 rounded-2xl ${
-                          msg.role === 'user' 
-                            ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white' 
-                            : 'bg-cyan-900/40 border border-cyan-800/50 text-cyan-100'
-                        }`}>
+                        <div className={`max-w-[80%] px-4 py-3 rounded-2xl ${msg.role === 'user' ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white' : 'bg-cyan-900/40 border border-cyan-800/50 text-cyan-100'}`}>
                           {msg.content}
                         </div>
                       </div>
@@ -421,45 +776,20 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                   </div>
                 )}
               </div>
-              
               <div className="p-4 border-t border-cyan-800/30">
-                <div className="max-w-3xl mx-auto">
-                  {chatMessages.length === 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4 justify-center">
-                      {[
-                        'Hi! What can you help me with?',
-                        'Generate a landing page for my startup',
-                        'What makes a good website?',
-                        'Help me plan my portfolio site',
-                      ].map((suggestion) => (
-                        <button
-                          key={suggestion}
-                          onClick={() => setAiPrompt(suggestion)}
-                          className="px-3 py-1.5 bg-cyan-800/30 border border-cyan-700/30 rounded-full text-sm text-cyan-300 hover:text-white hover:bg-cyan-700/40 transition-colors"
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAIChat()}
-                      disabled={generating}
-                      placeholder="Type a message..."
-                      className="flex-1 px-4 py-3 bg-cyan-900/30 border border-cyan-800/50 rounded-xl text-white placeholder-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50"
-                    />
-                    <button
-                      onClick={handleAIChat}
-                      disabled={generating || !aiPrompt.trim()}
-                      className="px-4 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white rounded-xl transition-colors disabled:opacity-50"
-                    >
-                      <Send className="w-5 h-5" />
-                    </button>
-                  </div>
+                <div className="max-w-3xl mx-auto flex gap-2">
+                  <input
+                    type="text"
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAIChat()}
+                    disabled={generating}
+                    placeholder="Type a message..."
+                    className="flex-1 px-4 py-3 bg-cyan-900/30 border border-cyan-800/50 rounded-xl text-white placeholder-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50"
+                  />
+                  <button onClick={handleAIChat} disabled={generating || !aiPrompt.trim()} className="px-4 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-xl disabled:opacity-50">
+                    <Send className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
             </div>
