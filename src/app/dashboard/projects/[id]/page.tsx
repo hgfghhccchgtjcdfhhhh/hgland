@@ -1033,7 +1033,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                         <Sparkles className="w-10 h-10 text-cyan-400" />
                       </div>
                       <h2 className="text-2xl font-bold text-white mb-2">hgland Agent</h2>
-                      <p className="text-cyan-300 mb-2">Powered by GPT-5.2 Codex</p>
+                      <p className="text-cyan-300 mb-2">Powered by GPT-5.1 Codex Max</p>
                       <p className="text-cyan-400/60 text-sm">Chat with me or ask me to generate files!</p>
                     </div>
                   </div>
