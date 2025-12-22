@@ -772,11 +772,6 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
               <span className={`px-2 py-0.5 text-xs font-medium rounded ${project.status === 'published' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
                 {project.status}
               </span>
-              <div className="flex items-center gap-2 ml-4 text-xs text-cyan-400">
-                <HardDrive className="w-3 h-3" /> {resources.ram}GB
-                <Cpu className="w-3 h-3 ml-2" /> {resources.cpu} cores
-                {resources.gpu && <><Zap className="w-3 h-3 ml-2" /> {resources.gpuType}</>}
-              </div>
             </div>
             
             <div className="flex items-center gap-2">
@@ -805,7 +800,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
             { tab: 'packages' as EditorTab, icon: Package, label: 'Packages' },
             { tab: 'terminal' as EditorTab, icon: Terminal, label: 'Terminal' },
             { tab: 'seo' as EditorTab, icon: Search, label: 'SEO' },
-            { tab: 'resources' as EditorTab, icon: Cpu, label: 'Resources' },
+            { tab: 'deployment' as EditorTab, icon: Cpu, label: 'Deploy' },
             { tab: 'integrations' as EditorTab, icon: Plug, label: 'Integrations' },
           ].map(({ tab, icon: Icon, label }) => (
             <button
@@ -1023,51 +1018,81 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
             </div>
           )}
 
-          {activeTab === 'resources' && (
+          {activeTab === 'deployment' && (
             <div className="flex-1 p-6 max-w-2xl">
-              <h2 className="text-xl font-semibold text-white mb-6">Project Resources</h2>
+              <h2 className="text-xl font-semibold text-white mb-6">Deployment Configuration</h2>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-cyan-200 mb-2">RAM: {resources.ram} GB</label>
-                  <input type="range" min="8" max="128" step="8" value={resources.ram} onChange={(e) => {
-                    const updated = {...resources, ram: parseInt(e.target.value)};
-                    setResources(updated);
-                  }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
-                  <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>8 GB</span><span>128 GB</span></div>
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">Deployment Type</label>
+                  <select value={deploymentConfig.type} onChange={(e) => {
+                    const updated = {...deploymentConfig, type: e.target.value as 'autoscale' | 'vm' | 'static' | 'scheduled'};
+                    setDeploymentConfig(updated);
+                    saveProjectData({ deploymentConfig: updated });
+                  }} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    <option value="autoscale">Autoscale (Pay per request)</option>
+                    <option value="vm">Reserved VM (Always running)</option>
+                    <option value="static">Static (HTML/CSS/JS only)</option>
+                    <option value="scheduled">Scheduled (Cron jobs)</option>
+                  </select>
+                  <p className="text-cyan-400/60 text-sm mt-2">Choose how your app will run when deployed</p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-cyan-200 mb-2">CPU Cores: {resources.cpu}</label>
-                  <input type="range" min="1" max="16" value={resources.cpu} onChange={(e) => {
-                    const updated = {...resources, cpu: parseInt(e.target.value)};
-                    setResources(updated);
-                  }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
-                  <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>1 core</span><span>16 cores</span></div>
-                </div>
-                <div>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" checked={resources.gpu} onChange={(e) => {
-                      const updated = {...resources, gpu: e.target.checked};
-                      setResources(updated);
-                      saveProjectData({ resources: updated });
-                    }} className="w-5 h-5 accent-cyan-500" />
-                    <span className="text-cyan-200">Enable GPU</span>
-                  </label>
-                </div>
-                {resources.gpu && (
+
+                {deploymentConfig.type === 'autoscale' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">CPU: {deploymentConfig.cpu} vCPU</label>
+                      <input type="range" min="0.5" max="4" step="0.5" value={deploymentConfig.cpu || 1} onChange={(e) => {
+                        const updated = {...deploymentConfig, cpu: parseFloat(e.target.value)};
+                        setDeploymentConfig(updated);
+                      }} onMouseUp={() => saveProjectData({ deploymentConfig })} className="w-full accent-cyan-500" />
+                      <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>0.5 vCPU</span><span>4 vCPU</span></div>
+                      <p className="text-cyan-400/60 text-xs mt-2">Billed: 18 Compute Units per CPU second</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">RAM: {deploymentConfig.ram} GB</label>
+                      <input type="range" min="0.5" max="32" step="0.5" value={deploymentConfig.ram || 2} onChange={(e) => {
+                        const updated = {...deploymentConfig, ram: parseFloat(e.target.value)};
+                        setDeploymentConfig(updated);
+                      }} onMouseUp={() => saveProjectData({ deploymentConfig })} className="w-full accent-cyan-500" />
+                      <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>0.5 GB</span><span>32 GB</span></div>
+                      <p className="text-cyan-400/60 text-xs mt-2">Billed: 2 Compute Units per RAM second</p>
+                    </div>
+                  </>
+                )}
+
+                {deploymentConfig.type === 'vm' && (
                   <div>
-                    <label className="block text-sm font-medium text-cyan-200 mb-2">GPU Type</label>
-                    <select value={resources.gpuType} onChange={(e) => {
-                      const updated = {...resources, gpuType: e.target.value};
-                      setResources(updated);
-                      saveProjectData({ resources: updated });
+                    <label className="block text-sm font-medium text-cyan-200 mb-2">VM Size</label>
+                    <select value={deploymentConfig.vmSize || 'shared'} onChange={(e) => {
+                      const updated = {...deploymentConfig, vmSize: e.target.value as 'shared' | 'dedicated-1' | 'dedicated-2' | 'dedicated-4'};
+                      setDeploymentConfig(updated);
+                      saveProjectData({ deploymentConfig: updated });
                     }} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                      <option value="NVIDIA A100">NVIDIA A100 (80GB)</option>
-                      <option value="NVIDIA H100">NVIDIA H100 (80GB)</option>
-                      <option value="NVIDIA RTX 4090">NVIDIA RTX 4090 (24GB)</option>
-                      <option value="NVIDIA T4">NVIDIA T4 (16GB)</option>
+                      <option value="shared">Shared VM (0.5 vCPU, 2GB RAM)</option>
+                      <option value="dedicated-1">Dedicated 1 (1 vCPU, 4GB RAM)</option>
+                      <option value="dedicated-2">Dedicated 2 (2 vCPU, 8GB RAM)</option>
+                      <option value="dedicated-4">Dedicated 4 (4 vCPU, 16GB RAM)</option>
                     </select>
+                    <p className="text-cyan-400/60 text-sm mt-2">VM always runs. Pay per hour based on size</p>
                   </div>
                 )}
+
+                {deploymentConfig.type === 'static' && (
+                  <div className="p-4 bg-cyan-900/30 rounded-lg border border-cyan-800/50">
+                    <p className="text-cyan-200">Static deployments host HTML, CSS, and JavaScript files only. No backend code. Free Compute Units!</p>
+                  </div>
+                )}
+
+                {deploymentConfig.type === 'scheduled' && (
+                  <div className="p-4 bg-cyan-900/30 rounded-lg border border-cyan-800/50">
+                    <p className="text-cyan-200">Scheduled deployments run on a fixed 1 vCPU / 2GB RAM configuration. Perfect for cron jobs and periodic tasks</p>
+                  </div>
+                )}
+
+                <div className="p-4 bg-cyan-900/20 rounded-lg border border-cyan-700/30 mt-6">
+                  <p className="text-cyan-300 font-medium mb-2">ℹ️ Important Note</p>
+                  <p className="text-cyan-400/70 text-sm">Replit does not currently support GPU allocation for standard deployments. All code runs on shared CPU resources.</p>
+                </div>
               </div>
             </div>
           )}

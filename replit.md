@@ -15,10 +15,12 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 - PostgreSQL database with users, projects, deployments, and chat messages tables
 - User authentication system (signup/login with JWT)
 - Dashboard for project management
-- Advanced project editor with 8 tabs (Code, Visual, AI, Packages, Terminal, SEO, Resources, Integrations)
+- Advanced project editor with 9 tabs (Code, Visual, AI, Languages, Packages, Terminal, SEO, Deploy, Integrations)
 - **AI generation and chat powered by GPT-5.1 Codex Max via Responses API using OPENAI_API_KEY**
-- **Auto-persistence for packages, resources, SEO, and integrations**
+- **Auto-persistence for packages, SEO, deployment config, and integrations**
+- **Real Replit deployment configuration with actual compute units and VM options**
 - **Interrupted message recovery on reload**
+- **Preview renders all files together (HTML + CSS + JavaScript)**
 - Development server running on port 5000
 
 ## Tech Stack
@@ -71,7 +73,7 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 
 ## Database Schema
 - **users**: id, email, phone, passwordHash, fullName, username, birthDate, timestamps
-- **projects**: id, userId, name, description, status, siteConfig, pages, files, packages, seoSettings, resources, integrations, terminalHistory, timestamps
+- **projects**: id, userId, name, description, status, siteConfig, pages, files, packages, seoSettings, deploymentConfig, integrations, terminalHistory, timestamps
 - **deployments**: id, projectId, status, url, buildLog, createdAt
 - **chatMessages**: id, projectId, role, content, createdAt
 
@@ -83,15 +85,16 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 - Dashboard with project list
 - New project creation (manual or AI-assisted flow)
 
-### Project Editor (8 Tabs)
-1. **Code Editor**: File tree with multiple files/folders, code editing with live preview
+### Project Editor (9 Tabs)
+1. **Code Editor**: File tree with multiple files/folders, code editing with unified preview (all HTML/CSS/JS files rendered together)
 2. **Visual Editor**: Component palette (drag-and-drop coming soon)
-3. **AI Assistant**: Chat with GPT-5.2 Codex, conversation history saves
-4. **Package Manager**: Install/uninstall npm packages
-5. **Terminal**: Run shell commands
-6. **SEO Settings**: Title, description, keywords, OG image, robots
-7. **Resources**: RAM (up to 128GB), CPU cores (up to 16), GPU (A100, H100, RTX 4090, T4)
-8. **Integrations**: Google Analytics, Stripe, Auth0, Cloudinary, SendGrid, Twilio, Firebase, Supabase
+3. **AI Assistant**: Chat with GPT-5.1 Codex Max, conversation history saves
+4. **Languages**: 30+ programming language selections for code generation
+5. **Package Manager**: Real npm package validation and installation
+6. **Terminal**: Run shell commands (mock output during dev)
+7. **SEO Settings**: Title, description, keywords, OG image, robots
+8. **Deployment Config**: Real Replit deployment options (Autoscale, VM, Static, Scheduled) with CPU/RAM configurations
+9. **Integrations**: 50+ integrations (Google Analytics, Stripe, Auth0, Firebase, Supabase, Telegram, Twilio, SendGrid, etc.)
 
 ### AI Agent Capabilities (Fully Autonomous)
 The hgland Agent (powered by GPT-5.1 Codex Max) is a fully autonomous agent with 6 tools:

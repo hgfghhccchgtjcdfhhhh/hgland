@@ -23,7 +23,7 @@ export const projects = pgTable('projects', {
   files: jsonb('files'),
   packages: jsonb('packages'),
   seoSettings: jsonb('seo_settings'),
-  resources: jsonb('resources'),
+  deploymentConfig: jsonb('deployment_config'),
   integrations: jsonb('integrations'),
   terminalHistory: jsonb('terminal_history'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
