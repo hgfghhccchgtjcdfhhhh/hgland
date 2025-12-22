@@ -45,6 +45,14 @@ interface ResourceConfig {
   cpu: number;
   gpu: boolean;
   gpuType: string;
+  disk: number;
+  cloudProvider?: 'aws' | 'gcp' | 'azure' | 'none';
+  cloudCredentials?: {
+    accessKey?: string;
+    secretKey?: string;
+    projectId?: string;
+    subscriptionId?: string;
+  };
 }
 
 interface IntegrationItem {
@@ -80,7 +88,10 @@ const defaultResources: ResourceConfig = {
   ram: 128,
   cpu: 8,
   gpu: true,
-  gpuType: 'NVIDIA A100'
+  gpuType: 'NVIDIA A100',
+  disk: 500,
+  cloudProvider: 'none',
+  cloudCredentials: {}
 };
 
 const defaultDeployment: DeploymentConfig = {
@@ -1037,48 +1048,143 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
           )}
 
           {activeTab === 'resources' && (
-            <div className="flex-1 p-6 max-w-2xl">
+            <div className="flex-1 p-6 max-w-3xl overflow-y-auto">
               <h2 className="text-xl font-semibold text-white mb-6">Project Resources</h2>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-cyan-200 mb-2">RAM: {resources.ram} GB</label>
-                  <input type="range" min="8" max="128" step="8" value={resources.ram} onChange={(e) => {
-                    const updated = {...resources, ram: parseInt(e.target.value)};
-                    setResources(updated);
-                  }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
-                  <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>8 GB</span><span>128 GB</span></div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-cyan-200 mb-2">CPU Cores: {resources.cpu}</label>
-                  <input type="range" min="1" max="16" value={resources.cpu} onChange={(e) => {
-                    const updated = {...resources, cpu: parseInt(e.target.value)};
-                    setResources(updated);
-                  }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
-                  <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>1 core</span><span>16 cores</span></div>
-                </div>
-                <div>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" checked={resources.gpu} onChange={(e) => {
-                      const updated = {...resources, gpu: e.target.checked};
-                      setResources(updated);
-                      saveProjectData({ resources: updated });
-                    }} className="w-5 h-5 accent-cyan-500" />
-                    <span className="text-cyan-200">Enable GPU</span>
-                  </label>
-                </div>
-                {resources.gpu && (
+              
+              <div className="mb-8 pb-8 border-b border-cyan-700/30">
+                <h3 className="text-lg font-medium text-cyan-300 mb-4">Resource Configuration</h3>
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-cyan-200 mb-2">GPU Type</label>
-                    <select value={resources.gpuType} onChange={(e) => {
-                      const updated = {...resources, gpuType: e.target.value};
+                    <label className="block text-sm font-medium text-cyan-200 mb-2">RAM: {resources.ram} GB</label>
+                    <input type="range" min="8" max="128" step="8" value={resources.ram} onChange={(e) => {
+                      const updated = {...resources, ram: parseInt(e.target.value)};
                       setResources(updated);
-                      saveProjectData({ resources: updated });
-                    }} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                      <option value="NVIDIA A100">NVIDIA A100 (80GB)</option>
-                      <option value="NVIDIA H100">NVIDIA H100 (80GB)</option>
-                      <option value="NVIDIA RTX 4090">NVIDIA RTX 4090 (24GB)</option>
-                      <option value="NVIDIA T4">NVIDIA T4 (16GB)</option>
-                    </select>
+                    }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
+                    <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>8 GB</span><span>128 GB</span></div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-cyan-200 mb-2">CPU Cores: {resources.cpu}</label>
+                    <input type="range" min="1" max="16" value={resources.cpu} onChange={(e) => {
+                      const updated = {...resources, cpu: parseInt(e.target.value)};
+                      setResources(updated);
+                    }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
+                    <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>1 core</span><span>16 cores</span></div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-cyan-200 mb-2">Disk Storage: {resources.disk} GB</label>
+                    <input type="range" min="50" max="10000" step="50" value={resources.disk} onChange={(e) => {
+                      const updated = {...resources, disk: parseInt(e.target.value)};
+                      setResources(updated);
+                    }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
+                    <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>50 GB</span><span>10 TB</span></div>
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" checked={resources.gpu} onChange={(e) => {
+                        const updated = {...resources, gpu: e.target.checked};
+                        setResources(updated);
+                        saveProjectData({ resources: updated });
+                      }} className="w-5 h-5 accent-cyan-500" />
+                      <span className="text-cyan-200">Enable GPU</span>
+                    </label>
+                  </div>
+                  {resources.gpu && (
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">GPU Type</label>
+                      <select value={resources.gpuType} onChange={(e) => {
+                        const updated = {...resources, gpuType: e.target.value};
+                        setResources(updated);
+                        saveProjectData({ resources: updated });
+                      }} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                        <option value="NVIDIA A100">NVIDIA A100 (80GB)</option>
+                        <option value="NVIDIA H100">NVIDIA H100 (80GB)</option>
+                        <option value="NVIDIA RTX 4090">NVIDIA RTX 4090 (24GB)</option>
+                        <option value="NVIDIA T4">NVIDIA T4 (16GB)</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium text-cyan-300 mb-4">Connect Your Cloud Provider</h3>
+                <p className="text-cyan-400/70 text-sm mb-4">Use your own cloud infrastructure (AWS, GCP, Azure) for real resources</p>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">Cloud Provider</label>
+                  <select value={resources.cloudProvider || 'none'} onChange={(e) => {
+                    const updated = {...resources, cloudProvider: e.target.value as 'aws' | 'gcp' | 'azure' | 'none'};
+                    setResources(updated);
+                    saveProjectData({ resources: updated });
+                  }} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    <option value="none">None (Mock resources)</option>
+                    <option value="aws">Amazon Web Services (AWS)</option>
+                    <option value="gcp">Google Cloud Platform (GCP)</option>
+                    <option value="azure">Microsoft Azure</option>
+                  </select>
+                </div>
+
+                {resources.cloudProvider === 'aws' && (
+                  <div className="space-y-4 p-4 bg-cyan-900/20 rounded-lg border border-cyan-800/30">
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">AWS Access Key ID</label>
+                      <input type="password" placeholder="AKIA..." value={resources.cloudCredentials?.accessKey || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, accessKey: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">AWS Secret Access Key</label>
+                      <input type="password" placeholder="••••••••••" value={resources.cloudCredentials?.secretKey || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, secretKey: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                    </div>
+                  </div>
+                )}
+
+                {resources.cloudProvider === 'gcp' && (
+                  <div className="space-y-4 p-4 bg-cyan-900/20 rounded-lg border border-cyan-800/30">
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">GCP Project ID</label>
+                      <input type="text" placeholder="my-project-id" value={resources.cloudCredentials?.projectId || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, projectId: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">GCP Service Account Key (JSON)</label>
+                      <textarea placeholder='{"type": "service_account", ...}' rows={4} value={resources.cloudCredentials?.secretKey || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, secretKey: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none" />
+                    </div>
+                  </div>
+                )}
+
+                {resources.cloudProvider === 'azure' && (
+                  <div className="space-y-4 p-4 bg-cyan-900/20 rounded-lg border border-cyan-800/30">
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">Azure Subscription ID</label>
+                      <input type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" value={resources.cloudCredentials?.subscriptionId || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, subscriptionId: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">Azure Client ID</label>
+                      <input type="password" placeholder="••••••••••" value={resources.cloudCredentials?.accessKey || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, accessKey: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">Azure Client Secret</label>
+                      <input type="password" placeholder="••••••••••" value={resources.cloudCredentials?.secretKey || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, secretKey: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                    </div>
                   </div>
                 )}
               </div>
