@@ -40,6 +40,13 @@ interface DeploymentConfig {
   vmSize?: 'shared' | 'dedicated-1' | 'dedicated-2' | 'dedicated-4';
 }
 
+interface ResourceConfig {
+  ram: number;
+  cpu: number;
+  gpu: boolean;
+  gpuType: string;
+}
+
 interface IntegrationItem {
   id: string;
   name: string;
@@ -57,6 +64,7 @@ interface Project {
   files: FileItem[] | null;
   packages: PackageItem[] | null;
   seoSettings: SEOSettings | null;
+  resources: ResourceConfig | null;
   deploymentConfig: DeploymentConfig | null;
   integrations: IntegrationItem[] | null;
 }
@@ -66,7 +74,14 @@ interface ChatMessage {
   content: string;
 }
 
-type EditorTab = 'visual' | 'code' | 'ai' | 'languages' | 'packages' | 'terminal' | 'seo' | 'deployment' | 'integrations';
+type EditorTab = 'visual' | 'code' | 'ai' | 'languages' | 'packages' | 'terminal' | 'seo' | 'resources' | 'deployment' | 'integrations';
+
+const defaultResources: ResourceConfig = {
+  ram: 128,
+  cpu: 8,
+  gpu: true,
+  gpuType: 'NVIDIA A100'
+};
 
 const defaultDeployment: DeploymentConfig = {
   type: 'autoscale',
@@ -269,6 +284,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   const [runningCommand, setRunningCommand] = useState(false);
   
   const [seoSettings, setSeoSettings] = useState<SEOSettings>(defaultSEO);
+  const [resources, setResources] = useState<ResourceConfig>(defaultResources);
   const [deploymentConfig, setDeploymentConfig] = useState<DeploymentConfig>(defaultDeployment);
   const [integrations, setIntegrations] = useState<IntegrationItem[]>(availableIntegrations);
   
@@ -315,6 +331,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
         
         if (data.project.packages) setPackages(data.project.packages);
         if (data.project.seoSettings) setSeoSettings(data.project.seoSettings);
+        if (data.project.resources) setResources(data.project.resources);
         if (data.project.deploymentConfig) setDeploymentConfig(data.project.deploymentConfig);
         if (data.project.integrations) setIntegrations(data.project.integrations);
         
@@ -800,7 +817,8 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
             { tab: 'packages' as EditorTab, icon: Package, label: 'Packages' },
             { tab: 'terminal' as EditorTab, icon: Terminal, label: 'Terminal' },
             { tab: 'seo' as EditorTab, icon: Search, label: 'SEO' },
-            { tab: 'deployment' as EditorTab, icon: Cpu, label: 'Deploy' },
+            { tab: 'resources' as EditorTab, icon: Cpu, label: 'Resources' },
+            { tab: 'deployment' as EditorTab, icon: Zap, label: 'Deploy' },
             { tab: 'integrations' as EditorTab, icon: Plug, label: 'Integrations' },
           ].map(({ tab, icon: Icon, label }) => (
             <button
@@ -1014,6 +1032,55 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                     <option value="noindex, nofollow">No Index, No Follow</option>
                   </select>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'resources' && (
+            <div className="flex-1 p-6 max-w-2xl">
+              <h2 className="text-xl font-semibold text-white mb-6">Project Resources</h2>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">RAM: {resources.ram} GB</label>
+                  <input type="range" min="8" max="128" step="8" value={resources.ram} onChange={(e) => {
+                    const updated = {...resources, ram: parseInt(e.target.value)};
+                    setResources(updated);
+                  }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
+                  <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>8 GB</span><span>128 GB</span></div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">CPU Cores: {resources.cpu}</label>
+                  <input type="range" min="1" max="16" value={resources.cpu} onChange={(e) => {
+                    const updated = {...resources, cpu: parseInt(e.target.value)};
+                    setResources(updated);
+                  }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
+                  <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>1 core</span><span>16 cores</span></div>
+                </div>
+                <div>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={resources.gpu} onChange={(e) => {
+                      const updated = {...resources, gpu: e.target.checked};
+                      setResources(updated);
+                      saveProjectData({ resources: updated });
+                    }} className="w-5 h-5 accent-cyan-500" />
+                    <span className="text-cyan-200">Enable GPU</span>
+                  </label>
+                </div>
+                {resources.gpu && (
+                  <div>
+                    <label className="block text-sm font-medium text-cyan-200 mb-2">GPU Type</label>
+                    <select value={resources.gpuType} onChange={(e) => {
+                      const updated = {...resources, gpuType: e.target.value};
+                      setResources(updated);
+                      saveProjectData({ resources: updated });
+                    }} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                      <option value="NVIDIA A100">NVIDIA A100 (80GB)</option>
+                      <option value="NVIDIA H100">NVIDIA H100 (80GB)</option>
+                      <option value="NVIDIA RTX 4090">NVIDIA RTX 4090 (24GB)</option>
+                      <option value="NVIDIA T4">NVIDIA T4 (16GB)</option>
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
           )}
