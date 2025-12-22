@@ -17,7 +17,7 @@ hgland is an AI-powered website builder platform built around a fully autonomous
 - **Styling**: Tailwind CSS
 - **Database**: PostgreSQL (Replit built-in) with Drizzle ORM
 - **Authentication**: JWT with jose library, bcryptjs for password hashing
-- **AI**: OpenAI GPT-5.1 Codex Max via openai npm package
+- **AI**: OpenAI GPT-5.1 Codex Max via @openai/agents SDK
 - **Runtime**: Node.js 20
 
 ## Project Structure

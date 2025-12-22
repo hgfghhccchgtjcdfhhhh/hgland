@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { Agent, run } from '@openai/agents';
 import { getSession } from '@/lib/auth';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -20,7 +16,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    const systemPrompt = `You are hgland Agent, an AI-powered website builder agent powered by GPT-5.1 Codex Max. Your task is to generate complete, production-ready website code based on user descriptions.
+    const websiteBuilderAgent = new Agent({
+      name: 'hgland Agent',
+      model: 'gpt-5.1-codex-max',
+      instructions: `You are hgland Agent, an AI-powered website builder agent powered by GPT-5.1 Codex Max. Your task is to generate complete, production-ready website code based on user descriptions.
 
 When generating websites:
 1. Create clean, modern HTML with semantic markup
@@ -46,16 +45,15 @@ Return a JSON object with this structure:
   }
 }
 
-Only return valid JSON, no markdown or explanation.`;
-
-    const response = await openai.responses.create({
-      model: 'gpt-5.1-codex-max',
-      instructions: systemPrompt,
-      input: `Create a website based on this description: ${prompt}`,
-      reasoning: { effort: 'medium' },
+Only return valid JSON, no markdown or explanation.`,
     });
 
-    const content = response.output_text;
+    const result = await run(
+      websiteBuilderAgent,
+      `Create a website based on this description: ${prompt}`
+    );
+
+    const content = result.finalOutput;
     
     if (!content) {
       return NextResponse.json({ error: 'No response from AI' }, { status: 500 });
