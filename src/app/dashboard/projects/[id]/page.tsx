@@ -324,15 +324,6 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
               role: m.role as 'user' | 'assistant',
               content: m.content
             }));
-            
-            const lastMessage = messages[messages.length - 1];
-            if (lastMessage.role === 'user') {
-              messages.push({
-                role: 'assistant',
-                content: 'Your previous request was interrupted. Please send your message again to continue.'
-              });
-            }
-            
             setChatMessages(messages);
           }
         }
@@ -401,9 +392,11 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
       path: '/' + name,
       content: ''
     };
-    setFiles([...files, newFile]);
+    const updated = [...files, newFile];
+    setFiles(updated);
     setSelectedFile(newFile);
     setCode('');
+    saveProjectData({ files: updated });
   }
 
   function addFolder() {
@@ -416,7 +409,9 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
       path: '/' + name,
       children: []
     };
-    setFiles([...files, newFolder]);
+    const updated = [...files, newFolder];
+    setFiles(updated);
+    saveProjectData({ files: updated });
   }
 
   function deleteFile(fileId: string) {
@@ -426,11 +421,13 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
         ...i,
         children: i.children ? removeItem(i.children) : undefined
       }));
-    setFiles(removeItem(files));
+    const updated = removeItem(files);
+    setFiles(updated);
     if (selectedFile?.id === fileId) {
       setSelectedFile(null);
       setCode('');
     }
+    saveProjectData({ files: updated });
   }
 
   function toggleFolder(folderId: string) {
@@ -445,18 +442,39 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
 
   async function installPackage() {
     if (!packageSearch.trim()) return;
+    const pkgName = packageSearch.trim();
+    
+    if (packages.some(p => p.name === pkgName)) {
+      alert(`Package "${pkgName}" is already installed.`);
+      return;
+    }
+    
     setInstallingPackage(true);
-    await new Promise(r => setTimeout(r, 1500));
-    const newPackage: PackageItem = {
-      name: packageSearch,
-      version: 'latest',
-      installed: true
-    };
-    const updated = [...packages, newPackage];
-    setPackages(updated);
-    saveProjectData({ packages: updated });
     setPackageSearch('');
-    setInstallingPackage(false);
+    
+    try {
+      const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(pkgName)}/latest`);
+      
+      if (!res.ok) {
+        alert(`Package "${pkgName}" not found on npm.`);
+        setInstallingPackage(false);
+        return;
+      }
+      
+      const data = await res.json();
+      const newPackage: PackageItem = {
+        name: pkgName,
+        version: data.version || 'latest',
+        installed: true
+      };
+      const updated = [...packages, newPackage];
+      setPackages(updated);
+      saveProjectData({ packages: updated });
+    } catch {
+      alert(`Failed to install "${pkgName}". Please check the package name.`);
+    } finally {
+      setInstallingPackage(false);
+    }
   }
 
   function removePackage(name: string) {
@@ -746,6 +764,13 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                   <textarea
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
+                    onBlur={() => {
+                      if (selectedFile) {
+                        const updated = updateFileContent(files, selectedFile.id, code);
+                        setFiles(updated);
+                        saveProjectData({ files: updated });
+                      }
+                    }}
                     className="w-full h-full bg-slate-950 text-cyan-400 font-mono text-sm p-4 rounded-lg border border-cyan-800/50 resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
                     spellCheck={false}
                     placeholder={selectedFile ? `Editing: ${selectedFile.name}` : 'Select a file to edit'}
