@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ArrowLeft, Save, Eye, Code2, Layout, Sparkles, Settings, Globe, Play, Loader2, Send, Waves,
-  FolderPlus, FilePlus, Package, Terminal, Search, Cpu, HardDrive, Zap, Plug, Trash2, ChevronRight, ChevronDown, File, Folder
+  FolderPlus, FilePlus, Package, Terminal, Search, Cpu, HardDrive, Zap, Plug, Trash2, ChevronRight, ChevronDown, File, Folder, Code, Box
 } from 'lucide-react';
 
 interface FileItem {
@@ -65,7 +65,7 @@ interface ChatMessage {
   content: string;
 }
 
-type EditorTab = 'visual' | 'code' | 'ai' | 'packages' | 'terminal' | 'seo' | 'resources' | 'integrations';
+type EditorTab = 'visual' | 'code' | 'ai' | 'languages' | 'packages' | 'terminal' | 'seo' | 'resources' | 'integrations';
 
 const defaultResources: ResourceConfig = {
   ram: 128,
@@ -83,15 +83,165 @@ const defaultSEO: SEOSettings = {
   robots: 'index, follow'
 };
 
+const availableLanguages = [
+  { id: 'javascript', name: 'JavaScript', icon: 'JS', category: 'Frontend' },
+  { id: 'typescript', name: 'TypeScript', icon: 'TS', category: 'Frontend' },
+  { id: 'python', name: 'Python', icon: 'PY', category: 'Backend' },
+  { id: 'rust', name: 'Rust', icon: 'RS', category: 'Systems' },
+  { id: 'go', name: 'Go', icon: 'GO', category: 'Backend' },
+  { id: 'java', name: 'Java', icon: 'JV', category: 'Backend' },
+  { id: 'kotlin', name: 'Kotlin', icon: 'KT', category: 'Mobile' },
+  { id: 'swift', name: 'Swift', icon: 'SW', category: 'Mobile' },
+  { id: 'csharp', name: 'C#', icon: 'C#', category: 'Backend' },
+  { id: 'cpp', name: 'C++', icon: '++', category: 'Systems' },
+  { id: 'c', name: 'C', icon: 'C', category: 'Systems' },
+  { id: 'ruby', name: 'Ruby', icon: 'RB', category: 'Backend' },
+  { id: 'php', name: 'PHP', icon: 'PH', category: 'Backend' },
+  { id: 'scala', name: 'Scala', icon: 'SC', category: 'Backend' },
+  { id: 'elixir', name: 'Elixir', icon: 'EX', category: 'Backend' },
+  { id: 'haskell', name: 'Haskell', icon: 'HS', category: 'Functional' },
+  { id: 'clojure', name: 'Clojure', icon: 'CJ', category: 'Functional' },
+  { id: 'dart', name: 'Dart', icon: 'DT', category: 'Mobile' },
+  { id: 'lua', name: 'Lua', icon: 'LU', category: 'Scripting' },
+  { id: 'r', name: 'R', icon: 'R', category: 'Data Science' },
+  { id: 'julia', name: 'Julia', icon: 'JL', category: 'Data Science' },
+  { id: 'perl', name: 'Perl', icon: 'PL', category: 'Scripting' },
+  { id: 'zig', name: 'Zig', icon: 'ZG', category: 'Systems' },
+  { id: 'nim', name: 'Nim', icon: 'NM', category: 'Systems' },
+  { id: 'ocaml', name: 'OCaml', icon: 'ML', category: 'Functional' },
+  { id: 'fsharp', name: 'F#', icon: 'F#', category: 'Functional' },
+  { id: 'erlang', name: 'Erlang', icon: 'ER', category: 'Functional' },
+  { id: 'cobol', name: 'COBOL', icon: 'CB', category: 'Legacy' },
+  { id: 'fortran', name: 'Fortran', icon: 'FT', category: 'Scientific' },
+  { id: 'assembly', name: 'Assembly', icon: 'AS', category: 'Low-Level' },
+  { id: 'sql', name: 'SQL', icon: 'SQ', category: 'Database' },
+  { id: 'graphql', name: 'GraphQL', icon: 'GQ', category: 'API' },
+  { id: 'solidity', name: 'Solidity', icon: 'SO', category: 'Blockchain' },
+  { id: 'move', name: 'Move', icon: 'MV', category: 'Blockchain' },
+  { id: 'cairo', name: 'Cairo', icon: 'CR', category: 'Blockchain' },
+  { id: 'wasm', name: 'WebAssembly', icon: 'WA', category: 'Web' },
+  { id: 'html', name: 'HTML', icon: 'HT', category: 'Markup' },
+  { id: 'css', name: 'CSS', icon: 'CS', category: 'Styling' },
+  { id: 'sass', name: 'Sass/SCSS', icon: 'SS', category: 'Styling' },
+  { id: 'markdown', name: 'Markdown', icon: 'MD', category: 'Docs' },
+];
+
+const packageManagers = [
+  { id: 'npm', name: 'npm (Node.js)', language: 'javascript' },
+  { id: 'yarn', name: 'Yarn (Node.js)', language: 'javascript' },
+  { id: 'pnpm', name: 'pnpm (Node.js)', language: 'javascript' },
+  { id: 'bun', name: 'Bun (Node.js)', language: 'javascript' },
+  { id: 'pip', name: 'pip (Python)', language: 'python' },
+  { id: 'poetry', name: 'Poetry (Python)', language: 'python' },
+  { id: 'conda', name: 'Conda (Python)', language: 'python' },
+  { id: 'uv', name: 'uv (Python)', language: 'python' },
+  { id: 'cargo', name: 'Cargo (Rust)', language: 'rust' },
+  { id: 'gomod', name: 'Go Modules', language: 'go' },
+  { id: 'maven', name: 'Maven (Java)', language: 'java' },
+  { id: 'gradle', name: 'Gradle (Java/Kotlin)', language: 'java' },
+  { id: 'nuget', name: 'NuGet (.NET)', language: 'csharp' },
+  { id: 'gem', name: 'RubyGems', language: 'ruby' },
+  { id: 'composer', name: 'Composer (PHP)', language: 'php' },
+  { id: 'hex', name: 'Hex (Elixir)', language: 'elixir' },
+  { id: 'pub', name: 'pub (Dart/Flutter)', language: 'dart' },
+  { id: 'spm', name: 'Swift Package Manager', language: 'swift' },
+  { id: 'cran', name: 'CRAN (R)', language: 'r' },
+  { id: 'cabal', name: 'Cabal (Haskell)', language: 'haskell' },
+  { id: 'opam', name: 'opam (OCaml)', language: 'ocaml' },
+  { id: 'vcpkg', name: 'vcpkg (C/C++)', language: 'cpp' },
+  { id: 'conan', name: 'Conan (C/C++)', language: 'cpp' },
+];
+
 const availableIntegrations: IntegrationItem[] = [
   { id: 'analytics', name: 'Google Analytics', enabled: false },
+  { id: 'gtm', name: 'Google Tag Manager', enabled: false },
+  { id: 'mixpanel', name: 'Mixpanel', enabled: false },
+  { id: 'amplitude', name: 'Amplitude', enabled: false },
+  { id: 'segment', name: 'Segment', enabled: false },
+  { id: 'hotjar', name: 'Hotjar', enabled: false },
+  { id: 'posthog', name: 'PostHog', enabled: false },
   { id: 'stripe', name: 'Stripe Payments', enabled: false },
-  { id: 'auth0', name: 'Auth0 Authentication', enabled: false },
-  { id: 'cloudinary', name: 'Cloudinary Media', enabled: false },
-  { id: 'sendgrid', name: 'SendGrid Email', enabled: false },
-  { id: 'twilio', name: 'Twilio SMS', enabled: false },
+  { id: 'paypal', name: 'PayPal', enabled: false },
+  { id: 'square', name: 'Square Payments', enabled: false },
+  { id: 'braintree', name: 'Braintree', enabled: false },
+  { id: 'paddle', name: 'Paddle', enabled: false },
+  { id: 'lemonsqueezy', name: 'Lemon Squeezy', enabled: false },
+  { id: 'auth0', name: 'Auth0', enabled: false },
+  { id: 'clerk', name: 'Clerk', enabled: false },
+  { id: 'nextauth', name: 'NextAuth.js', enabled: false },
+  { id: 'supabase-auth', name: 'Supabase Auth', enabled: false },
+  { id: 'firebase-auth', name: 'Firebase Auth', enabled: false },
+  { id: 'okta', name: 'Okta', enabled: false },
+  { id: 'keycloak', name: 'Keycloak', enabled: false },
+  { id: 'cloudinary', name: 'Cloudinary', enabled: false },
+  { id: 'uploadthing', name: 'UploadThing', enabled: false },
+  { id: 'imagekit', name: 'ImageKit', enabled: false },
+  { id: 'bunnycdn', name: 'BunnyCDN', enabled: false },
+  { id: 'cloudflare-images', name: 'Cloudflare Images', enabled: false },
+  { id: 'sendgrid', name: 'SendGrid', enabled: false },
+  { id: 'resend', name: 'Resend', enabled: false },
+  { id: 'postmark', name: 'Postmark', enabled: false },
+  { id: 'mailgun', name: 'Mailgun', enabled: false },
+  { id: 'mailchimp', name: 'Mailchimp', enabled: false },
+  { id: 'convertkit', name: 'ConvertKit', enabled: false },
+  { id: 'twilio', name: 'Twilio', enabled: false },
+  { id: 'vonage', name: 'Vonage', enabled: false },
+  { id: 'messagebird', name: 'MessageBird', enabled: false },
   { id: 'firebase', name: 'Firebase', enabled: false },
   { id: 'supabase', name: 'Supabase', enabled: false },
+  { id: 'planetscale', name: 'PlanetScale', enabled: false },
+  { id: 'neon', name: 'Neon Database', enabled: false },
+  { id: 'xata', name: 'Xata', enabled: false },
+  { id: 'turso', name: 'Turso', enabled: false },
+  { id: 'mongodb', name: 'MongoDB Atlas', enabled: false },
+  { id: 'fauna', name: 'Fauna', enabled: false },
+  { id: 'cockroachdb', name: 'CockroachDB', enabled: false },
+  { id: 'redis', name: 'Redis/Upstash', enabled: false },
+  { id: 'openai', name: 'OpenAI', enabled: false },
+  { id: 'anthropic', name: 'Anthropic Claude', enabled: false },
+  { id: 'google-ai', name: 'Google AI (Gemini)', enabled: false },
+  { id: 'cohere', name: 'Cohere', enabled: false },
+  { id: 'replicate', name: 'Replicate', enabled: false },
+  { id: 'huggingface', name: 'Hugging Face', enabled: false },
+  { id: 'stability', name: 'Stability AI', enabled: false },
+  { id: 'elevenlabs', name: 'ElevenLabs', enabled: false },
+  { id: 'vercel', name: 'Vercel', enabled: false },
+  { id: 'netlify', name: 'Netlify', enabled: false },
+  { id: 'railway', name: 'Railway', enabled: false },
+  { id: 'render', name: 'Render', enabled: false },
+  { id: 'fly', name: 'Fly.io', enabled: false },
+  { id: 'aws', name: 'AWS', enabled: false },
+  { id: 'gcp', name: 'Google Cloud', enabled: false },
+  { id: 'azure', name: 'Azure', enabled: false },
+  { id: 'digitalocean', name: 'DigitalOcean', enabled: false },
+  { id: 'cloudflare', name: 'Cloudflare', enabled: false },
+  { id: 'github', name: 'GitHub', enabled: false },
+  { id: 'gitlab', name: 'GitLab', enabled: false },
+  { id: 'bitbucket', name: 'Bitbucket', enabled: false },
+  { id: 'linear', name: 'Linear', enabled: false },
+  { id: 'jira', name: 'Jira', enabled: false },
+  { id: 'notion', name: 'Notion', enabled: false },
+  { id: 'slack', name: 'Slack', enabled: false },
+  { id: 'discord', name: 'Discord', enabled: false },
+  { id: 'telegram', name: 'Telegram', enabled: false },
+  { id: 'sentry', name: 'Sentry', enabled: false },
+  { id: 'datadog', name: 'Datadog', enabled: false },
+  { id: 'logrocket', name: 'LogRocket', enabled: false },
+  { id: 'newrelic', name: 'New Relic', enabled: false },
+  { id: 'algolia', name: 'Algolia', enabled: false },
+  { id: 'meilisearch', name: 'Meilisearch', enabled: false },
+  { id: 'typesense', name: 'Typesense', enabled: false },
+  { id: 'elasticsearch', name: 'Elasticsearch', enabled: false },
+  { id: 'shopify', name: 'Shopify', enabled: false },
+  { id: 'woocommerce', name: 'WooCommerce', enabled: false },
+  { id: 'snipcart', name: 'Snipcart', enabled: false },
+  { id: 'medusa', name: 'Medusa', enabled: false },
+  { id: 'contentful', name: 'Contentful', enabled: false },
+  { id: 'sanity', name: 'Sanity', enabled: false },
+  { id: 'strapi', name: 'Strapi', enabled: false },
+  { id: 'prismic', name: 'Prismic', enabled: false },
+  { id: 'datocms', name: 'DatoCMS', enabled: false },
+  { id: 'storyblok', name: 'Storyblok', enabled: false },
 ];
 
 export default function ProjectEditorPage({ params }: { params: Promise<{ id: string }> }) {
@@ -510,6 +660,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
             { tab: 'code' as EditorTab, icon: Code2, label: 'Code' },
             { tab: 'visual' as EditorTab, icon: Layout, label: 'Visual' },
             { tab: 'ai' as EditorTab, icon: Sparkles, label: 'AI' },
+            { tab: 'languages' as EditorTab, icon: Code, label: 'Languages' },
             { tab: 'packages' as EditorTab, icon: Package, label: 'Packages' },
             { tab: 'terminal' as EditorTab, icon: Terminal, label: 'Terminal' },
             { tab: 'seo' as EditorTab, icon: Search, label: 'SEO' },
@@ -571,6 +722,42 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
               <div className="text-center">
                 <Layout className="w-16 h-16 mx-auto mb-4 opacity-50" />
                 <p>Visual Editor - Drag & Drop Coming Soon</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'languages' && (
+            <div className="flex-1 p-6 overflow-y-auto">
+              <h2 className="text-xl font-semibold text-white mb-2">Languages & Package Managers</h2>
+              <p className="text-cyan-400/70 text-sm mb-6">Select programming languages and package managers for your project. The AI agent can generate code in any of these languages.</p>
+              
+              <div className="mb-8">
+                <h3 className="text-lg font-medium text-cyan-300 mb-4">Programming Languages ({availableLanguages.length})</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+                  {availableLanguages.map((lang) => (
+                    <div key={lang.id} className="p-3 bg-cyan-900/30 rounded-lg border border-cyan-800/30 hover:border-cyan-500/50 transition-colors cursor-pointer group">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-8 h-8 flex items-center justify-center bg-gradient-to-br from-cyan-500 to-teal-500 rounded text-white text-xs font-bold">{lang.icon}</span>
+                        <span className="text-white font-medium text-sm">{lang.name}</span>
+                      </div>
+                      <span className="text-xs text-cyan-400/60">{lang.category}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium text-cyan-300 mb-4">Package Managers ({packageManagers.length})</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {packageManagers.map((pm) => (
+                    <div key={pm.id} className="p-3 bg-cyan-900/30 rounded-lg border border-cyan-800/30 hover:border-cyan-500/50 transition-colors cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Box className="w-5 h-5 text-cyan-400" />
+                        <span className="text-white font-medium text-sm">{pm.name}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
