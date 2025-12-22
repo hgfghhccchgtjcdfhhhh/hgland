@@ -33,6 +33,13 @@ interface SEOSettings {
   robots: string;
 }
 
+interface DeploymentConfig {
+  type: 'autoscale' | 'vm' | 'static' | 'scheduled';
+  cpu?: number;
+  ram?: number;
+  vmSize?: 'shared' | 'dedicated-1' | 'dedicated-2' | 'dedicated-4';
+}
+
 interface IntegrationItem {
   id: string;
   name: string;
@@ -50,6 +57,7 @@ interface Project {
   files: FileItem[] | null;
   packages: PackageItem[] | null;
   seoSettings: SEOSettings | null;
+  deploymentConfig: DeploymentConfig | null;
   integrations: IntegrationItem[] | null;
 }
 
@@ -58,7 +66,13 @@ interface ChatMessage {
   content: string;
 }
 
-type EditorTab = 'visual' | 'code' | 'ai' | 'languages' | 'packages' | 'terminal' | 'seo' | 'integrations';
+type EditorTab = 'visual' | 'code' | 'ai' | 'languages' | 'packages' | 'terminal' | 'seo' | 'deployment' | 'integrations';
+
+const defaultDeployment: DeploymentConfig = {
+  type: 'autoscale',
+  cpu: 1,
+  ram: 2
+};
 
 const defaultSEO: SEOSettings = {
   title: '',
@@ -255,6 +269,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   const [runningCommand, setRunningCommand] = useState(false);
   
   const [seoSettings, setSeoSettings] = useState<SEOSettings>(defaultSEO);
+  const [deploymentConfig, setDeploymentConfig] = useState<DeploymentConfig>(defaultDeployment);
   const [integrations, setIntegrations] = useState<IntegrationItem[]>(availableIntegrations);
   
   const [aiPrompt, setAiPrompt] = useState('');
@@ -300,6 +315,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
         
         if (data.project.packages) setPackages(data.project.packages);
         if (data.project.seoSettings) setSeoSettings(data.project.seoSettings);
+        if (data.project.deploymentConfig) setDeploymentConfig(data.project.deploymentConfig);
         if (data.project.integrations) setIntegrations(data.project.integrations);
         
         if (messagesRes.ok) {
