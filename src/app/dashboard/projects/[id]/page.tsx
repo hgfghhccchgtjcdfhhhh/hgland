@@ -442,16 +442,74 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     setExpandedFolders(newExpanded);
   }
 
+  function getAllFiles(items: FileItem[]): FileItem[] {
+    let allFiles: FileItem[] = [];
+    for (const item of items) {
+      if (item.type === 'file') {
+        allFiles.push(item);
+      } else if (item.children) {
+        allFiles = allFiles.concat(getAllFiles(item.children));
+      }
+    }
+    return allFiles;
+  }
+
+  function buildPreviewHTML(allFiles: FileItem[]): string {
+    let htmlContent = '';
+    let cssContent = '';
+    let jsContent = '';
+
+    // Collect HTML, CSS, and JS files
+    for (const file of allFiles) {
+      const content = file.content || '';
+      if (file.name.endsWith('.html')) {
+        htmlContent = content; // Use first HTML file as base
+      } else if (file.name.endsWith('.css')) {
+        cssContent += content + '\n';
+      } else if (file.name.endsWith('.js')) {
+        jsContent += content + '\n';
+      }
+    }
+
+    // If no HTML file, create a basic structure
+    if (!htmlContent) {
+      htmlContent = '<!DOCTYPE html>\n<html>\n<head><title>Preview</title></head>\n<body></body>\n</html>';
+    }
+
+    // Insert CSS and JS into HTML
+    const headEndIndex = htmlContent.indexOf('</head>');
+    const bodyEndIndex = htmlContent.lastIndexOf('</body>');
+
+    if (headEndIndex !== -1 && cssContent) {
+      htmlContent = htmlContent.slice(0, headEndIndex) + 
+        `<style>\n${cssContent}\n</style>\n` + 
+        htmlContent.slice(headEndIndex);
+    }
+
+    if (bodyEndIndex !== -1 && jsContent) {
+      htmlContent = htmlContent.slice(0, bodyEndIndex) + 
+        `<script>\n${jsContent}\n</script>\n` + 
+        htmlContent.slice(bodyEndIndex);
+    } else if (jsContent) {
+      htmlContent = htmlContent.slice(0, -7) + `<script>\n${jsContent}\n</script>\n</html>`;
+    }
+
+    return htmlContent;
+  }
+
   useEffect(() => {
-    if (previewRef.current && code) {
+    if (previewRef.current && files.length > 0) {
+      const allFiles = getAllFiles(files);
+      const previewHTML = buildPreviewHTML(allFiles);
+      
       const doc = previewRef.current.contentDocument;
       if (doc) {
         doc.open();
-        doc.write(code);
+        doc.write(previewHTML);
         doc.close();
       }
     }
-  }, [code]);
+  }, [files]);
 
   async function installPackage() {
     if (!packageSearch.trim()) return;
