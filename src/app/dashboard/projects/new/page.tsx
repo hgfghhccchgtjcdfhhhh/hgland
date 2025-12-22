@@ -3,15 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Sparkles, Wand2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Wand2, Loader2 } from 'lucide-react';
 
 export default function NewProjectPage() {
   const router = useRouter();
   const [step, setStep] = useState<'choose' | 'ai' | 'manual'>('choose');
   const [loading, setLoading] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
+  const [generationStatus, setGenerationStatus] = useState('');
 
-  async function createProject(name: string, description: string) {
+  async function createProject(name: string, description: string, useAI: boolean = false) {
     setLoading(true);
     try {
       const res = await fetch('/api/projects', {
@@ -23,11 +24,37 @@ export default function NewProjectPage() {
       if (!res.ok) throw new Error('Failed to create project');
 
       const { project } = await res.json();
+
+      if (useAI) {
+        setGenerationStatus('Generating website with GPT-5.1 Codex Max...');
+        
+        const aiRes = await fetch('/api/ai/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: description, projectId: project.id }),
+        });
+
+        if (aiRes.ok) {
+          const aiData = await aiRes.json();
+          
+          await fetch(`/api/projects/${project.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              pages: JSON.stringify(aiData.generated.pages),
+              siteConfig: JSON.stringify(aiData.generated.siteConfig),
+            }),
+          });
+        }
+      }
+
       router.push(`/dashboard/projects/${project.id}`);
-    } catch {
+    } catch (err) {
+      console.error(err);
       alert('Failed to create project');
     } finally {
       setLoading(false);
+      setGenerationStatus('');
     }
   }
 
@@ -36,7 +63,8 @@ export default function NewProjectPage() {
     const formData = new FormData(e.currentTarget);
     await createProject(
       formData.get('name') as string,
-      formData.get('description') as string
+      formData.get('description') as string,
+      false
     );
   }
 
@@ -44,7 +72,8 @@ export default function NewProjectPage() {
     if (!aiPrompt.trim()) return;
     await createProject(
       aiPrompt.slice(0, 50) + (aiPrompt.length > 50 ? '...' : ''),
-      aiPrompt
+      aiPrompt,
+      true
     );
   }
 
@@ -82,7 +111,7 @@ export default function NewProjectPage() {
                 </div>
                 <h2 className="text-xl font-semibold text-white mb-2">Generate with AI</h2>
                 <p className="text-slate-400">
-                  Describe your website and let hgland Agent build it for you automatically.
+                  Describe your website and let hgland Agent (GPT-5.1 Codex Max) build it for you automatically.
                 </p>
               </button>
 
@@ -107,6 +136,7 @@ export default function NewProjectPage() {
             <button
               onClick={() => setStep('choose')}
               className="flex items-center gap-2 text-slate-400 hover:text-white mb-8"
+              disabled={loading}
             >
               <ArrowLeft className="w-4 h-4" />
               Back
@@ -117,16 +147,25 @@ export default function NewProjectPage() {
                 <Sparkles className="w-8 h-8 text-purple-400" />
               </div>
               <h1 className="text-3xl font-bold text-white mb-2">Describe Your Website</h1>
-              <p className="text-slate-400">Tell us what you want to build and our AI will create it</p>
+              <p className="text-slate-400">Powered by hgland Agent (GPT-5.1 Codex Max)</p>
             </div>
 
             <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700">
               <textarea
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
+                disabled={loading}
                 placeholder="Example: A modern portfolio website for a photographer with a gallery, about page, and contact form. Use dark theme with elegant typography."
-                className="w-full h-40 px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                className="w-full h-40 px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none disabled:opacity-50"
               />
+              
+              {generationStatus && (
+                <div className="flex items-center gap-3 mt-4 p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                  <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+                  <span className="text-purple-300">{generationStatus}</span>
+                </div>
+              )}
+              
               <div className="flex justify-end mt-4">
                 <button
                   onClick={handleAIGenerate}
@@ -134,7 +173,10 @@ export default function NewProjectPage() {
                   className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
                 >
                   {loading ? (
-                    <>Generating...</>
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Generating...
+                    </>
                   ) : (
                     <>
                       <Sparkles className="w-5 h-5" />
@@ -154,7 +196,8 @@ export default function NewProjectPage() {
                 <button
                   key={suggestion}
                   onClick={() => setAiPrompt(suggestion)}
-                  className="text-left p-4 bg-slate-800/30 rounded-lg border border-slate-700 hover:border-slate-500 text-slate-400 hover:text-white transition-colors text-sm"
+                  disabled={loading}
+                  className="text-left p-4 bg-slate-800/30 rounded-lg border border-slate-700 hover:border-slate-500 text-slate-400 hover:text-white transition-colors text-sm disabled:opacity-50"
                 >
                   {suggestion}
                 </button>

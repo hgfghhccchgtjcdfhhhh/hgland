@@ -3,7 +3,13 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Eye, Code2, Layout, Sparkles, Settings, Globe, Play } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Code2, Layout, Sparkles, Settings, Globe, Play, Loader2 } from 'lucide-react';
+
+interface PageContent {
+  name: string;
+  path: string;
+  html: string;
+}
 
 interface Project {
   id: string;
@@ -21,9 +27,13 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<EditorTab>('visual');
-  const [code, setCode] = useState('<div class="container">\n  <h1>Welcome to my website</h1>\n  <p>Start building your site!</p>\n</div>');
+  const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [activeTab, setActiveTab] = useState<EditorTab>('code');
+  const [code, setCode] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
+  const [currentPage, setCurrentPage] = useState<PageContent | null>(null);
+  const [pages, setPages] = useState<PageContent[]>([]);
 
   useEffect(() => {
     async function loadProject() {
@@ -35,6 +45,21 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
         }
         const data = await res.json();
         setProject(data.project);
+        
+        if (data.project.pages) {
+          try {
+            const parsedPages = JSON.parse(data.project.pages);
+            if (Array.isArray(parsedPages) && parsedPages.length > 0) {
+              setPages(parsedPages);
+              setCurrentPage(parsedPages[0]);
+              setCode(parsedPages[0].html || '');
+            }
+          } catch {
+            setCode('<div class="container">\n  <h1>Welcome to my website</h1>\n  <p>Start building your site!</p>\n</div>');
+          }
+        } else {
+          setCode('<div class="container">\n  <h1>Welcome to my website</h1>\n  <p>Start building your site!</p>\n</div>');
+        }
       } catch {
         router.push('/dashboard');
       } finally {
@@ -43,6 +68,72 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     }
     loadProject();
   }, [id, router]);
+
+  async function handleSave() {
+    if (!project) return;
+    setSaving(true);
+    try {
+      const updatedPages = pages.map(p => 
+        p.path === currentPage?.path ? { ...p, html: code } : p
+      );
+      
+      await fetch(`/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pages: JSON.stringify(updatedPages.length > 0 ? updatedPages : [{ name: 'Home', path: '/', html: code }]),
+        }),
+      });
+      
+      setPages(updatedPages.length > 0 ? updatedPages : [{ name: 'Home', path: '/', html: code }]);
+    } catch (err) {
+      console.error('Save failed:', err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleAIGenerate() {
+    if (!aiPrompt.trim() || !project) return;
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt, projectId: project.id }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Generation failed');
+      }
+
+      const data = await res.json();
+      
+      if (data.generated?.pages) {
+        setPages(data.generated.pages);
+        setCurrentPage(data.generated.pages[0]);
+        setCode(data.generated.pages[0].html || '');
+        
+        await fetch(`/api/projects/${project.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pages: JSON.stringify(data.generated.pages),
+            siteConfig: JSON.stringify(data.generated.siteConfig),
+          }),
+        });
+      }
+      
+      setAiPrompt('');
+      setActiveTab('code');
+    } catch (err) {
+      console.error('AI generation error:', err);
+      alert(err instanceof Error ? err.message : 'AI generation failed');
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -88,9 +179,13 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                 <Settings className="w-4 h-4" />
                 Settings
               </button>
-              <button className="flex items-center gap-2 px-3 py-1.5 text-slate-400 hover:text-white transition-colors">
-                <Save className="w-4 h-4" />
-                Save
+              <button 
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-2 px-3 py-1.5 text-slate-400 hover:text-white transition-colors disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? 'Saving...' : 'Save'}
               </button>
               <button className="flex items-center gap-2 px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors">
                 <Globe className="w-4 h-4" />
@@ -126,7 +221,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
             className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
               activeTab === 'ai' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:bg-slate-700'
             }`}
-            title="AI Assistant"
+            title="AI Assistant (GPT-5.1 Codex Max)"
           >
             <Sparkles className="w-5 h-5" />
           </button>
@@ -150,12 +245,18 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                 </div>
               </div>
               <div className="flex-1 p-4">
-                <div className="bg-white rounded-lg h-full flex items-center justify-center">
-                  <div className="text-center text-slate-500">
-                    <Layout className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                    <p className="text-lg font-medium">Visual Editor Canvas</p>
-                    <p className="text-sm">Drag components here to build your page</p>
-                  </div>
+                <div className="bg-white rounded-lg h-full overflow-auto">
+                  {code ? (
+                    <div dangerouslySetInnerHTML={{ __html: code }} />
+                  ) : (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center text-slate-500">
+                        <Layout className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                        <p className="text-lg font-medium">Visual Editor Canvas</p>
+                        <p className="text-sm">Drag components here to build your page</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -164,16 +265,35 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
           {activeTab === 'code' && (
             <div className="flex-1 flex">
               <div className="w-48 bg-slate-800/30 border-r border-slate-700 p-4">
-                <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-4">Files</h3>
+                <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-4">Pages</h3>
                 <div className="space-y-1">
-                  {['index.html', 'styles.css', 'script.js', 'about.html', 'contact.html'].map((file) => (
-                    <div
-                      key={file}
-                      className="px-3 py-1.5 rounded text-sm text-slate-300 hover:bg-slate-700/50 cursor-pointer transition-colors"
-                    >
-                      {file}
-                    </div>
-                  ))}
+                  {pages.length > 0 ? (
+                    pages.map((page) => (
+                      <div
+                        key={page.path}
+                        onClick={() => {
+                          setCurrentPage(page);
+                          setCode(page.html || '');
+                        }}
+                        className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${
+                          currentPage?.path === page.path
+                            ? 'bg-purple-600 text-white'
+                            : 'text-slate-300 hover:bg-slate-700/50'
+                        }`}
+                      >
+                        {page.name}
+                      </div>
+                    ))
+                  ) : (
+                    ['index.html'].map((file) => (
+                      <div
+                        key={file}
+                        className="px-3 py-1.5 rounded text-sm text-slate-300 bg-purple-600 cursor-pointer"
+                      >
+                        {file}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
               <div className="flex-1 flex flex-col">
@@ -186,14 +306,14 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                   />
                 </div>
               </div>
-              <div className="w-1/3 border-l border-slate-700 p-4">
+              <div className="w-1/3 border-l border-slate-700 p-4 flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-medium text-slate-400">Preview</h3>
                   <button className="flex items-center gap-1 text-xs text-purple-400">
                     <Play className="w-3 h-3" /> Run
                   </button>
                 </div>
-                <div className="bg-white rounded-lg h-64 p-4">
+                <div className="bg-white rounded-lg flex-1 overflow-auto p-4">
                   <div dangerouslySetInnerHTML={{ __html: code }} />
                 </div>
               </div>
@@ -207,21 +327,42 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                   <div className="w-20 h-20 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-6">
                     <Sparkles className="w-10 h-10 text-purple-400" />
                   </div>
-                  <h2 className="text-2xl font-bold text-white mb-2">AI Assistant</h2>
-                  <p className="text-slate-400 mb-8">
-                    Describe what you want to add or change, and the AI will help you build it.
+                  <h2 className="text-2xl font-bold text-white mb-2">hgland Agent</h2>
+                  <p className="text-slate-400 mb-2">Powered by GPT-5.1 Codex Max</p>
+                  <p className="text-slate-500 text-sm mb-8">
+                    Describe what you want to add or change, and the AI will generate it for you.
                   </p>
                   <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
                     <textarea
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
+                      disabled={generating}
                       placeholder="Example: Add a hero section with a gradient background and a call-to-action button"
-                      className="w-full h-32 bg-transparent text-white placeholder-slate-500 resize-none focus:outline-none"
+                      className="w-full h-32 bg-transparent text-white placeholder-slate-500 resize-none focus:outline-none disabled:opacity-50"
                     />
+                    {generating && (
+                      <div className="flex items-center gap-3 mb-4 p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                        <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+                        <span className="text-purple-300">Generating with GPT-5.1 Codex Max...</span>
+                      </div>
+                    )}
                     <div className="flex justify-end pt-2 border-t border-slate-700">
-                      <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors">
-                        <Sparkles className="w-4 h-4" />
-                        Generate
+                      <button 
+                        onClick={handleAIGenerate}
+                        disabled={generating || !aiPrompt.trim()}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {generating ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4" />
+                            Generate
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -235,7 +376,8 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                       <button
                         key={suggestion}
                         onClick={() => setAiPrompt(suggestion)}
-                        className="px-3 py-1.5 bg-slate-800 rounded-full text-sm text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                        disabled={generating}
+                        className="px-3 py-1.5 bg-slate-800 rounded-full text-sm text-slate-400 hover:text-white hover:bg-slate-700 transition-colors disabled:opacity-50"
                       >
                         {suggestion}
                       </button>

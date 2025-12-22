@@ -1,7 +1,7 @@
 # hgland - AI-Powered Website Builder Platform
 
 ## Overview
-hgland is an AI-powered website builder platform built around a fully autonomous build agent. The platform allows users to create websites through AI generation, drag-and-drop visual editing, or manual code editing.
+hgland is an AI-powered website builder platform built around a fully autonomous build agent called **hgland Agent**, powered by **GPT-5.1 Codex Max** via OpenAI API. The platform allows users to create websites through AI generation, drag-and-drop visual editing, or manual code editing.
 
 ## Current State
 - Full platform UI implemented with Next.js 16
@@ -9,6 +9,7 @@ hgland is an AI-powered website builder platform built around a fully autonomous
 - User authentication system (signup/login with JWT)
 - Dashboard for project management
 - Project editor with Visual, Code, and AI tabs
+- **AI generation powered by GPT-5.1 Codex Max using OPENAI_API_KEY**
 - Development server running on port 5000
 
 ## Tech Stack
@@ -16,6 +17,7 @@ hgland is an AI-powered website builder platform built around a fully autonomous
 - **Styling**: Tailwind CSS
 - **Database**: PostgreSQL (Replit built-in) with Drizzle ORM
 - **Authentication**: JWT with jose library, bcryptjs for password hashing
+- **AI**: OpenAI GPT-5.1 Codex Max via openai npm package
 - **Runtime**: Node.js 20
 
 ## Project Structure
@@ -24,6 +26,8 @@ hgland is an AI-powered website builder platform built around a fully autonomous
 ├── src/
 │   ├── app/
 │   │   ├── api/
+│   │   │   ├── ai/
+│   │   │   │   └── generate/route.ts   # AI generation endpoint
 │   │   │   ├── auth/
 │   │   │   │   ├── login/route.ts
 │   │   │   │   ├── logout/route.ts
@@ -69,6 +73,10 @@ hgland is an AI-powered website builder platform built around a fully autonomous
 - Start: `npm run start` (serves on port 5000)
 - Deployment target: autoscale
 
+## Environment Variables
+- **OPENAI_API_KEY**: Required for AI generation (GPT-5.1 Codex Max)
+- **DATABASE_URL**: PostgreSQL connection string (auto-configured)
+
 ## Authentication Flow
 - Users sign up with email, phone, password, birth date, full name, and username
 - Passwords are hashed with bcryptjs (12 rounds)
@@ -81,14 +89,15 @@ hgland is an AI-powered website builder platform built around a fully autonomous
 - Dashboard with project list
 - New project creation (manual or AI-assisted flow)
 - Project editor with three modes:
-  - Visual Editor (component palette and canvas)
-  - Code Editor (file tree and code textarea with preview)
-  - AI Assistant (prompt-based generation interface)
+  - Visual Editor (component palette and canvas with live preview)
+  - Code Editor (file tree and code textarea with live preview, save to database)
+  - AI Assistant (GPT-5.1 Codex Max powered generation)
+- AI website generation from description
+- Project save/persistence to database
 
-## Planned Enhancements
-- Real AI integration for website generation (requires OpenAI API)
-- Actual drag-and-drop functionality in visual editor
-- Code editor persistence to database
-- SEO tooling (meta tags, sitemap.xml, robots.txt)
-- One-click deployment pipeline
-- Custom domain support
+## AI Agent Capabilities
+The hgland Agent (powered by GPT-5.1 Codex Max) can:
+- Generate complete website HTML from natural language descriptions
+- Create responsive, modern designs with Tailwind CSS
+- Build multi-page websites with proper structure
+- Generate SEO-friendly content and markup
