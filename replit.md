@@ -1,7 +1,14 @@
 # hgland - AI-Powered Website Builder Platform
 
 ## Overview
-hgland is an AI-powered website builder platform built around a fully autonomous build agent called **hgland Agent**, powered by **GPT-5.1 Codex Max** via OpenAI API. The platform allows users to create websites through AI generation, drag-and-drop visual editing, or manual code editing.
+hgland is an AI-powered website builder platform built around a fully autonomous build agent called **hgland Agent**, powered by **GPT-5.1 Codex Max** via OpenAI Agents SDK (@openai/agents). The platform allows users to create websites through AI generation, drag-and-drop visual editing, or manual code editing.
+
+## Design Theme
+The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
+- **Verified by**: Zoink (former Top 1 Extreme Demon, held position for 15 months)
+- **Created by**: OniLink
+- **Style**: Tropical ocean wave aesthetic with cyan/teal/emerald gradients
+- **Colors**: Cyan (#06b6d4), Teal (#14b8a6), Emerald (#10b981) gradients on dark backgrounds
 
 ## Current State
 - Full platform UI implemented with Next.js 16

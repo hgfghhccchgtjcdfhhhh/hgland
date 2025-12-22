@@ -10,10 +10,30 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { prompt, projectId } = await request.json();
+    const { prompt, projectId, mode } = await request.json();
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+    }
+
+    if (mode === 'chat') {
+      const chatAgent = new Agent({
+        name: 'hgland Agent',
+        model: 'gpt-5.1-codex-max',
+        instructions: `You are hgland Agent, a helpful AI assistant for the hgland website builder platform. You can have normal conversations with users, answer questions about web development, help them plan their websites, and provide guidance.
+
+When the user wants to generate or modify website code, help them refine their requirements first through conversation. Only generate code when they explicitly ask for it or when you're confident they want to build something.
+
+Be friendly, helpful, and conversational. You were built by hgland and powered by GPT-5.1 Codex Max.`,
+      });
+
+      const result = await run(chatAgent, prompt);
+      
+      return NextResponse.json({
+        success: true,
+        type: 'chat',
+        message: result.finalOutput,
+      });
     }
 
     const websiteBuilderAgent = new Agent({
@@ -73,6 +93,7 @@ Only return valid JSON, no markdown or explanation.`,
 
     return NextResponse.json({
       success: true,
+      type: 'generate',
       projectId,
       generated: generatedContent,
     });

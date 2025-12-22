@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, FolderOpen, Sparkles, Code2, Layout, Settings, LogOut } from 'lucide-react';
+import { Plus, FolderOpen, Sparkles, Code2, Layout, Settings, LogOut, Waves } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -61,29 +61,32 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+      <div className="min-h-screen bg-gradient-to-b from-cyan-950 to-slate-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <nav className="bg-slate-800/50 border-b border-slate-700">
+    <div className="min-h-screen bg-gradient-to-b from-cyan-950 to-slate-950">
+      <nav className="bg-cyan-900/30 border-b border-cyan-800/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
-              <span className="text-2xl font-bold text-white">hgland</span>
+              <div className="flex items-center gap-2">
+                <Waves className="w-7 h-7 text-cyan-400" />
+                <span className="text-2xl font-bold text-white">hgland</span>
+              </div>
               <div className="hidden md:flex items-center gap-6">
                 <Link href="/dashboard" className="text-white font-medium">Dashboard</Link>
-                <Link href="/dashboard/projects" className="text-slate-400 hover:text-white">Projects</Link>
+                <Link href="/dashboard/projects" className="text-cyan-300/60 hover:text-white">Projects</Link>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-slate-400">Welcome, {user?.fullName}</span>
+              <span className="text-cyan-300/60">Welcome, {user?.fullName}</span>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                className="flex items-center gap-2 text-cyan-300/60 hover:text-white transition-colors"
               >
                 <LogOut className="w-5 h-5" />
               </button>
@@ -96,11 +99,11 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white">Your Projects</h1>
-            <p className="text-slate-400 mt-1">Create and manage your AI-powered websites</p>
+            <p className="text-cyan-300/60 mt-1">Create and manage your AI-powered websites</p>
           </div>
           <Link
             href="/dashboard/projects/new"
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-cyan-500/25"
           >
             <Plus className="w-5 h-5" />
             New Project
@@ -109,14 +112,14 @@ export default function DashboardPage() {
 
         {projects.length === 0 ? (
           <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-800 mb-6">
-              <FolderOpen className="w-10 h-10 text-slate-500" />
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-cyan-800/30 mb-6">
+              <FolderOpen className="w-10 h-10 text-cyan-500" />
             </div>
             <h2 className="text-xl font-semibold text-white mb-2">No projects yet</h2>
-            <p className="text-slate-400 mb-6">Get started by creating your first website</p>
+            <p className="text-cyan-300/60 mb-6">Get started by creating your first website</p>
             <Link
               href="/dashboard/projects/new"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-cyan-500/25"
             >
               <Sparkles className="w-5 h-5" />
               Create with AI
@@ -128,31 +131,31 @@ export default function DashboardPage() {
               <Link
                 key={project.id}
                 href={`/dashboard/projects/${project.id}`}
-                className="bg-slate-800/50 rounded-xl p-6 border border-slate-700 hover:border-purple-500 transition-colors group"
+                className="bg-cyan-900/30 rounded-xl p-6 border border-cyan-700/30 hover:border-cyan-500/50 transition-colors group"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center">
                     <Layout className="w-6 h-6 text-white" />
                   </div>
                   <span className={`px-2 py-1 text-xs font-medium rounded ${
                     project.status === 'published' 
-                      ? 'bg-green-500/20 text-green-400' 
+                      ? 'bg-emerald-500/20 text-emerald-400' 
                       : 'bg-yellow-500/20 text-yellow-400'
                   }`}>
                     {project.status}
                   </span>
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-purple-400 transition-colors">
+                <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-cyan-400 transition-colors">
                   {project.name}
                 </h3>
-                <p className="text-slate-400 text-sm line-clamp-2">
+                <p className="text-cyan-300/60 text-sm line-clamp-2">
                   {project.description || 'No description'}
                 </p>
-                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-700">
-                  <button className="flex items-center gap-1 text-sm text-slate-400 hover:text-white">
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-cyan-800/30">
+                  <button className="flex items-center gap-1 text-sm text-cyan-400 hover:text-white">
                     <Code2 className="w-4 h-4" /> Edit
                   </button>
-                  <button className="flex items-center gap-1 text-sm text-slate-400 hover:text-white">
+                  <button className="flex items-center gap-1 text-sm text-cyan-400 hover:text-white">
                     <Settings className="w-4 h-4" /> Settings
                   </button>
                 </div>
@@ -162,24 +165,24 @@ export default function DashboardPage() {
         )}
 
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-xl p-6 border border-purple-500/30">
-            <Sparkles className="w-8 h-8 text-purple-400 mb-4" />
+          <div className="bg-gradient-to-br from-cyan-600/20 to-teal-600/20 rounded-xl p-6 border border-cyan-500/30">
+            <Sparkles className="w-8 h-8 text-cyan-400 mb-4" />
             <h3 className="text-lg font-semibold text-white mb-2">AI Generation</h3>
-            <p className="text-slate-400 text-sm">
+            <p className="text-cyan-300/60 text-sm">
               Describe your website and let our AI build it for you in seconds.
             </p>
           </div>
-          <div className="bg-gradient-to-br from-blue-600/20 to-cyan-600/20 rounded-xl p-6 border border-blue-500/30">
-            <Layout className="w-8 h-8 text-blue-400 mb-4" />
+          <div className="bg-gradient-to-br from-teal-600/20 to-emerald-600/20 rounded-xl p-6 border border-teal-500/30">
+            <Layout className="w-8 h-8 text-teal-400 mb-4" />
             <h3 className="text-lg font-semibold text-white mb-2">Visual Editor</h3>
-            <p className="text-slate-400 text-sm">
+            <p className="text-teal-300/60 text-sm">
               Drag and drop components to customize your website visually.
             </p>
           </div>
-          <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 rounded-xl p-6 border border-green-500/30">
-            <Code2 className="w-8 h-8 text-green-400 mb-4" />
+          <div className="bg-gradient-to-br from-emerald-600/20 to-green-600/20 rounded-xl p-6 border border-emerald-500/30">
+            <Code2 className="w-8 h-8 text-emerald-400 mb-4" />
             <h3 className="text-lg font-semibold text-white mb-2">Code Editor</h3>
-            <p className="text-slate-400 text-sm">
+            <p className="text-emerald-300/60 text-sm">
               Full access to edit the underlying code for complete control.
             </p>
           </div>
