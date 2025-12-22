@@ -515,8 +515,6 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     setGenerating(true);
     await saveMessage('user', userMessage);
 
-    const isGenerateRequest = /\b(generate|create|build|make|add|design)\b.*\b(website|page|section|component|html|code|file)\b/i.test(userMessage);
-
     try {
       const res = await fetch('/api/ai/generate', {
         method: 'POST',
@@ -524,7 +522,9 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({ 
           prompt: userMessage, 
           projectId: project.id,
-          mode: isGenerateRequest ? 'generate' : 'chat'
+          mode: 'autonomous',
+          files: files,
+          conversationHistory: chatMessages.slice(-20)
         }),
       });
 
@@ -534,20 +534,37 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
       }
 
       const data = await res.json();
-      let assistantMessage = '';
       
-      if (data.type === 'chat') {
-        assistantMessage = data.message;
-      } else if (data.generated?.pages) {
-        const newFiles = data.generated.pages.map((p: { name: string; path: string; html: string }, i: number) => ({
-          id: Date.now().toString() + i,
-          name: p.name + '.html',
-          type: 'file' as const,
-          path: p.path,
-          content: p.html
-        }));
-        setFiles(prev => [...prev, ...newFiles]);
-        assistantMessage = `I've generated ${newFiles.length} file(s) for you! Check the file tree to see them.`;
+      if (data.updatedFiles && data.updatedFiles.length > 0) {
+        setFiles(data.updatedFiles);
+      }
+      
+      if (data.newPackages && data.newPackages.length > 0) {
+        setPackages(prev => [...prev, ...data.newPackages]);
+      }
+      
+      if (data.terminalOutput && data.terminalOutput.length > 0) {
+        setTerminalOutput(prev => [...prev, ...data.terminalOutput]);
+      }
+      
+      let assistantMessage = data.message || '';
+      
+      if (data.toolResults && data.toolResults.length > 0) {
+        const actions = data.toolResults.map((t: { tool: string; success: boolean; result: { message?: string } }) => 
+          `${t.success ? '✓' : '✗'} ${t.result?.message || t.tool}`
+        ).join('\n');
+        
+        if (actions && !assistantMessage.includes(actions)) {
+          assistantMessage += `\n\n**Actions performed:**\n${actions}`;
+        }
+      }
+      
+      if (data.generatedImages && data.generatedImages.length > 0) {
+        assistantMessage += `\n\n**Generated ${data.generatedImages.length} image(s)** - Check the file tree under /images`;
+      }
+      
+      if (data.contextCompacted) {
+        assistantMessage += '\n\n*Context compacted to maintain performance*';
       }
       
       setChatMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);

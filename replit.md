@@ -91,13 +91,32 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 7. **Resources**: RAM (up to 128GB), CPU cores (up to 16), GPU (A100, H100, RTX 4090, T4)
 8. **Integrations**: Google Analytics, Stripe, Auth0, Cloudinary, SendGrid, Twilio, Firebase, Supabase
 
-### AI Agent Capabilities
-The hgland Agent (powered by GPT-5.2 Codex) can:
-- Have normal conversations with users
-- Generate complete website HTML from natural language descriptions
-- Create responsive, modern designs with Tailwind CSS
+### AI Agent Capabilities (Fully Autonomous)
+The hgland Agent (powered by GPT-5.2 Codex) is a fully autonomous agent with 8 tools:
+
+**Tools Available:**
+1. **generate_image**: Generate images using gpt-image-1 via Replit AI Integrations
+2. **create_file**: Create new files with content
+3. **edit_file**: Edit existing file content
+4. **delete_file**: Delete files from the project
+5. **read_file**: Read file contents
+6. **run_terminal**: Execute terminal commands
+7. **install_package**: Install npm packages
+8. **list_files**: List project files
+
+**Key Features:**
+- **Context Compaction**: Automatically summarizes older messages when >20 messages, enabling indefinite sessions
+- **Autonomous Execution**: Plans and executes multi-step tasks without user intervention
+- **Image Generation**: Uses Replit AI Integrations (AI_INTEGRATIONS_OPENAI_BASE_URL/API_KEY) - charges to Replit credits
+- **Virtual Filesystem**: Files stored in PostgreSQL database as JSON, not on disk
+
+**Capabilities:**
+- Have natural conversations with users
+- Generate complete websites with images from natural language
+- Create responsive designs with Tailwind CSS
 - Build multi-page websites with proper structure
-- Generate SEO-friendly content and markup
+- Generate and manage images for websites
+- Install packages and run build commands
 
 ## Development
 - Run `npm run dev` to start the development server on port 5000
