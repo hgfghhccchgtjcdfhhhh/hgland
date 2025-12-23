@@ -248,6 +248,7 @@ function processToolResults(
   const packages: { name: string; version: string; installed: boolean }[] = [];
   const terminalOutput: string[] = [];
   const generatedImages: { filename: string; base64Data: string }[] = [];
+  const createdFilePaths = new Set<string>();
 
   for (const call of toolCalls) {
     const result = call.result as Record<string, unknown>;
@@ -256,6 +257,19 @@ function processToolResults(
     switch (result.action) {
       case 'create_file': {
         const file = result.file as FileItem;
+        const filePath = file.path;
+        
+        // Skip if file already exists in current files
+        if (updatedFiles.some(f => f.path === filePath)) {
+          break;
+        }
+        
+        // Skip if this file was already created in this batch
+        if (createdFilePaths.has(filePath)) {
+          break;
+        }
+        
+        createdFilePaths.add(filePath);
         updatedFiles.push(file);
         break;
       }
@@ -289,6 +303,13 @@ function processToolResults(
         break;
       }
       case 'generate_image': {
+        const imagePath = `/images/${result.filename as string}`;
+        
+        // Skip if image already exists
+        if (updatedFiles.some(f => f.path === imagePath)) {
+          break;
+        }
+        
         generatedImages.push({
           filename: result.filename as string,
           base64Data: result.base64Data as string,
@@ -297,7 +318,7 @@ function processToolResults(
           id: Date.now().toString() + Math.random().toString(36).slice(2),
           name: result.filename as string,
           type: 'file',
-          path: `/images/${result.filename}`,
+          path: imagePath,
           content: `data:image/png;base64,${result.base64Data}`,
         });
         break;
