@@ -36,8 +36,15 @@ export const deployments = pgTable('deployments', {
   projectId: uuid('project_id').references(() => projects.id).notNull(),
   status: varchar('status', { length: 50 }).default('pending').notNull(),
   url: text('url'),
+  subdomain: varchar('subdomain', { length: 100 }),
+  customDomain: varchar('custom_domain', { length: 255 }),
+  domainVerified: boolean('domain_verified').default(false),
+  sslEnabled: boolean('ssl_enabled').default(false),
   buildLog: text('build_log'),
+  deployedFiles: jsonb('deployed_files'),
+  version: varchar('version', { length: 20 }).default('1'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
 export const chatMessages = pgTable('chat_messages', {

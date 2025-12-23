@@ -6,8 +6,8 @@ import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import dynamic from 'next/dynamic';
 import { 
-  ArrowLeft, Save, Eye, Code2, Layout, Sparkles, Settings, Globe, Play, Loader2, Send, Waves,
-  FolderPlus, FilePlus, Package, Terminal, Search, Cpu, HardDrive, Zap, Plug, Trash2, ChevronRight, ChevronDown, File, Folder, Code, Box, RefreshCw, Square
+  ArrowLeft, Save, Code2, Layout, Sparkles, Globe, Play, Loader2, Send, Waves,
+  FolderPlus, FilePlus, Package, Terminal, Search, Cpu, HardDrive, Zap, Plug, Trash2, ChevronRight, ChevronDown, File, Folder, Code, Box, RefreshCw, Square, Rocket, ExternalLink
 } from 'lucide-react';
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { 
@@ -333,6 +333,25 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   const [backendRunning, setBackendRunning] = useState(false);
   const [backendUrl, setBackendUrl] = useState<string | null>(null);
   const webContainerRef = useRef<unknown>(null);
+  
+  const [currentDeployment, setCurrentDeployment] = useState<{
+    url: string;
+    fullUrl: string;
+    subdomain: string;
+    customDomain?: string;
+    version: string;
+    status: string;
+  } | null>(null);
+  const [deploying, setDeploying] = useState(false);
+  const [deploySubdomain, setDeploySubdomain] = useState('');
+  const [deployCustomDomain, setDeployCustomDomain] = useState('');
+  const [siteOrigin, setSiteOrigin] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setSiteOrigin(window.location.origin);
+    }
+  }, []);
 
   useEffect(() => {
     async function loadProject() {
@@ -384,6 +403,24 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
               content: m.content
             }));
             setChatMessages(messages);
+          }
+        }
+        
+        const deployRes = await fetch(`/api/deploy?projectId=${id}`);
+        if (deployRes.ok) {
+          const deployData = await deployRes.json();
+          if (deployData.deployments && deployData.deployments.length > 0) {
+            const latest = deployData.deployments[0];
+            setCurrentDeployment({
+              url: latest.url,
+              fullUrl: (typeof window !== 'undefined' ? window.location.origin : '') + latest.url,
+              subdomain: latest.subdomain,
+              customDomain: latest.customDomain,
+              version: latest.version,
+              status: latest.status
+            });
+            if (latest.subdomain) setDeploySubdomain(latest.subdomain);
+            if (latest.customDomain) setDeployCustomDomain(latest.customDomain);
           }
         }
       } catch {
@@ -438,6 +475,38 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
       console.error('Save failed:', err);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeploy() {
+    if (!project) return;
+    setDeploying(true);
+    try {
+      await handleSave();
+      
+      const res = await fetch('/api/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: project.id,
+          subdomain: deploySubdomain || undefined,
+          customDomain: deployCustomDomain || undefined
+        })
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Deployment failed');
+      }
+      
+      const data = await res.json();
+      setCurrentDeployment(data.deployment);
+      setDeploySubdomain(data.deployment.subdomain);
+    } catch (err) {
+      console.error('Deploy failed:', err);
+      alert(err instanceof Error ? err.message : 'Deployment failed');
+    } finally {
+      setDeploying(false);
     }
   }
 
@@ -583,47 +652,91 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
       const allFiles = getAllFiles(files);
       const wcFiles: Record<string, unknown> = {};
       
+      const publicDir: Record<string, unknown> = {};
+      
       for (const file of allFiles) {
         const path = file.path.replace(/^\//, '');
         if (file.type === 'file' && file.content) {
           wcFiles[path] = { file: { contents: file.content } };
+          
+          if (file.name.endsWith('.html') || file.name.endsWith('.css') || 
+              (file.name.endsWith('.js') && !file.name.includes('server'))) {
+            publicDir[path] = { file: { contents: file.content } };
+          }
         }
       }
       
-      const hasPackageJson = allFiles.some(f => f.name === 'package.json');
-      if (!hasPackageJson) {
-        wcFiles['package.json'] = {
-          file: {
-            contents: JSON.stringify({
-              name: 'webcontainer-app',
-              type: 'module',
-              dependencies: { express: 'latest' },
-              scripts: { start: 'node server.js' }
-            }, null, 2)
-          }
-        };
+      const hasServerFile = allFiles.some(f => 
+        f.name === 'server.js' || f.name === 'app.js' || 
+        f.path.includes('server') || f.path.includes('backend') ||
+        (f.name === 'package.json' && f.content?.includes('"express"'))
+      );
+      
+      const unifiedServerCode = `
+import express from 'express';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const app = express();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+app.use(express.json());
+app.use(express.static('.'));
+
+${hasServerFile ? `
+try {
+  const userApp = await import('./server.js').catch(() => null) || 
+                  await import('./app.js').catch(() => null) ||
+                  await import('./backend/server.js').catch(() => null);
+  if (userApp?.default) {
+    app.use('/api', userApp.default);
+  }
+} catch (e) { console.log('No backend routes found'); }
+` : ''}
+
+app.get('*', (req, res) => {
+  res.sendFile(join(__dirname, 'index.html'));
+});
+
+app.listen(3000, () => console.log('Unified server on port 3000'));
+`;
+
+      wcFiles['_unified_server.js'] = { file: { contents: unifiedServerCode } };
+      
+      const existingPkgJson = allFiles.find(f => f.name === 'package.json');
+      let pkgJsonContent;
+      if (existingPkgJson && existingPkgJson.content) {
+        try {
+          const parsed = JSON.parse(existingPkgJson.content);
+          parsed.type = 'module';
+          parsed.dependencies = { ...parsed.dependencies, express: 'latest' };
+          parsed.scripts = { ...parsed.scripts, start: 'node _unified_server.js' };
+          pkgJsonContent = JSON.stringify(parsed, null, 2);
+        } catch {
+          pkgJsonContent = JSON.stringify({
+            name: 'webcontainer-app',
+            type: 'module',
+            dependencies: { express: 'latest' },
+            scripts: { start: 'node _unified_server.js' }
+          }, null, 2);
+        }
+      } else {
+        pkgJsonContent = JSON.stringify({
+          name: 'webcontainer-app',
+          type: 'module',
+          dependencies: { express: 'latest' },
+          scripts: { start: 'node _unified_server.js' }
+        }, null, 2);
       }
+      
+      wcFiles['package.json'] = { file: { contents: pkgJsonContent } };
       
       await wc.mount(wcFiles);
       
       const installProcess = await wc.spawn('npm', ['install']);
       await installProcess.exit;
       
-      const serverFile = allFiles.find(f => 
-        f.name === 'server.js' || f.name === 'index.js' || f.name === 'app.js' ||
-        f.path.includes('server') || f.path.includes('backend')
-      );
-      const startScript = serverFile ? serverFile.path.replace(/^\//, '') : 'server.js';
-      
-      const hasPackageJsonWithStart = allFiles.some(f => 
-        f.name === 'package.json' && f.content?.includes('"start"')
-      );
-      
-      if (hasPackageJsonWithStart) {
-        wc.spawn('npm', ['start']);
-      } else {
-        wc.spawn('node', [startScript]);
-      }
+      wc.spawn('npm', ['start']);
       
       wc.on('server-ready', (_port: number, url: string) => {
         setBackendUrl(url);
@@ -1813,79 +1926,98 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
           )}
 
           {activeTab === 'deployment' && (
-            <div className="flex-1 p-6 max-w-2xl">
-              <h2 className="text-xl font-semibold text-white mb-6">Deployment Configuration</h2>
+            <div className="flex-1 p-6 max-w-2xl overflow-y-auto">
+              <h2 className="text-xl font-semibold text-white mb-6">Publish Your Website</h2>
+              
+              {currentDeployment && (
+                <div className="mb-6 p-4 bg-green-900/30 rounded-lg border border-green-600/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-green-400 font-medium">Live</span>
+                    <span className="text-cyan-400/60 text-sm">v{currentDeployment.version}</span>
+                  </div>
+                  <a 
+                    href={currentDeployment.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-cyan-300 hover:text-white underline break-all"
+                  >
+                    {siteOrigin}{currentDeployment.url}
+                  </a>
+                  <div className="mt-3 flex gap-2">
+                    <a 
+                      href={currentDeployment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-3 py-1.5 bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-300 rounded text-sm"
+                    >
+                      <ExternalLink className="w-3 h-3" /> Visit Site
+                    </a>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-cyan-200 mb-2">Deployment Type</label>
-                  <select value={deploymentConfig.type} onChange={(e) => {
-                    const updated = {...deploymentConfig, type: e.target.value as 'autoscale' | 'vm' | 'static' | 'scheduled'};
-                    setDeploymentConfig(updated);
-                    saveProjectData({ deploymentConfig: updated });
-                  }} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                    <option value="autoscale">Autoscale (Pay per request)</option>
-                    <option value="vm">Reserved VM (Always running)</option>
-                    <option value="static">Static (HTML/CSS/JS only)</option>
-                    <option value="scheduled">Scheduled (Cron jobs)</option>
-                  </select>
-                  <p className="text-cyan-400/60 text-sm mt-2">Choose how your app will run when deployed</p>
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">Free Subdomain</label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-cyan-400/60">{siteOrigin}/deploy/</span>
+                    <input 
+                      type="text" 
+                      value={deploySubdomain} 
+                      onChange={(e) => setDeploySubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                      placeholder="my-awesome-site"
+                      className="flex-1 px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    />
+                  </div>
+                  <p className="text-cyan-400/60 text-sm mt-2">Choose a unique subdomain for your website</p>
                 </div>
 
-                {deploymentConfig.type === 'autoscale' && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-cyan-200 mb-2">CPU: {deploymentConfig.cpu} vCPU</label>
-                      <input type="range" min="0.5" max="4" step="0.5" value={deploymentConfig.cpu || 1} onChange={(e) => {
-                        const updated = {...deploymentConfig, cpu: parseFloat(e.target.value)};
-                        setDeploymentConfig(updated);
-                      }} onMouseUp={() => saveProjectData({ deploymentConfig })} className="w-full accent-cyan-500" />
-                      <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>0.5 vCPU</span><span>4 vCPU</span></div>
-                      <p className="text-cyan-400/60 text-xs mt-2">Billed: 18 Compute Units per CPU second</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-cyan-200 mb-2">RAM: {deploymentConfig.ram} GB</label>
-                      <input type="range" min="0.5" max="32" step="0.5" value={deploymentConfig.ram || 2} onChange={(e) => {
-                        const updated = {...deploymentConfig, ram: parseFloat(e.target.value)};
-                        setDeploymentConfig(updated);
-                      }} onMouseUp={() => saveProjectData({ deploymentConfig })} className="w-full accent-cyan-500" />
-                      <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>0.5 GB</span><span>32 GB</span></div>
-                      <p className="text-cyan-400/60 text-xs mt-2">Billed: 2 Compute Units per RAM second</p>
-                    </div>
-                  </>
-                )}
+                <div className="border-t border-cyan-800/30 pt-6">
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">Custom Domain (Optional)</label>
+                  <input 
+                    type="text" 
+                    value={deployCustomDomain} 
+                    onChange={(e) => setDeployCustomDomain(e.target.value)}
+                    placeholder="www.mywebsite.com"
+                    className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  />
+                  <p className="text-cyan-400/60 text-sm mt-2">Point your domain&apos;s CNAME to your subdomain above</p>
+                </div>
 
-                {deploymentConfig.type === 'vm' && (
+                <button
+                  onClick={handleDeploy}
+                  disabled={deploying}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+                >
+                  {deploying ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Deploying...
+                    </>
+                  ) : (
+                    <>
+                      <Rocket className="w-5 h-5" />
+                      {currentDeployment ? 'Update Deployment' : 'Deploy Now'}
+                    </>
+                  )}
+                </button>
+
+                <div className="border-t border-cyan-800/30 pt-6 mt-6">
+                  <h3 className="text-lg font-medium text-white mb-4">Deployment Settings</h3>
                   <div>
-                    <label className="block text-sm font-medium text-cyan-200 mb-2">VM Size</label>
-                    <select value={deploymentConfig.vmSize || 'shared'} onChange={(e) => {
-                      const updated = {...deploymentConfig, vmSize: e.target.value as 'shared' | 'dedicated-1' | 'dedicated-2' | 'dedicated-4'};
+                    <label className="block text-sm font-medium text-cyan-200 mb-2">Deployment Type</label>
+                    <select value={deploymentConfig.type} onChange={(e) => {
+                      const updated = {...deploymentConfig, type: e.target.value as 'autoscale' | 'vm' | 'static' | 'scheduled'};
                       setDeploymentConfig(updated);
                       saveProjectData({ deploymentConfig: updated });
                     }} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                      <option value="shared">Shared VM (0.5 vCPU, 2GB RAM)</option>
-                      <option value="dedicated-1">Dedicated 1 (1 vCPU, 4GB RAM)</option>
-                      <option value="dedicated-2">Dedicated 2 (2 vCPU, 8GB RAM)</option>
-                      <option value="dedicated-4">Dedicated 4 (4 vCPU, 16GB RAM)</option>
+                      <option value="static">Static (HTML/CSS/JS only)</option>
+                      <option value="autoscale">Autoscale (Pay per request)</option>
+                      <option value="vm">Reserved VM (Always running)</option>
+                      <option value="scheduled">Scheduled (Cron jobs)</option>
                     </select>
-                    <p className="text-cyan-400/60 text-sm mt-2">VM always runs. Pay per hour based on size</p>
                   </div>
-                )}
-
-                {deploymentConfig.type === 'static' && (
-                  <div className="p-4 bg-cyan-900/30 rounded-lg border border-cyan-800/50">
-                    <p className="text-cyan-200">Static deployments host HTML, CSS, and JavaScript files only. No backend code. Free Compute Units!</p>
-                  </div>
-                )}
-
-                {deploymentConfig.type === 'scheduled' && (
-                  <div className="p-4 bg-cyan-900/30 rounded-lg border border-cyan-800/50">
-                    <p className="text-cyan-200">Scheduled deployments run on a fixed 1 vCPU / 2GB RAM configuration. Perfect for cron jobs and periodic tasks</p>
-                  </div>
-                )}
-
-                <div className="p-4 bg-cyan-900/20 rounded-lg border border-cyan-700/30 mt-6">
-                  <p className="text-cyan-300 font-medium mb-2">ℹ️ Important Note</p>
-                  <p className="text-cyan-400/70 text-sm">Replit does not currently support GPU allocation for standard deployments. All code runs on shared CPU resources.</p>
                 </div>
               </div>
             </div>
