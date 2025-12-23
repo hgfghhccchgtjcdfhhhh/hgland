@@ -1348,14 +1348,14 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
             </div>
             
             <div className="flex items-center gap-2">
-              <button className="flex items-center gap-2 px-3 py-1.5 text-cyan-300 hover:text-white transition-colors">
-                <Eye className="w-4 h-4" /> Preview
-              </button>
               <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-3 py-1.5 text-cyan-300 hover:text-white transition-colors disabled:opacity-50">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {saving ? 'Saving...' : 'Save'}
               </button>
-              <button className="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white font-medium rounded-lg transition-colors">
+              <button 
+                onClick={() => setActiveTab('deployment')}
+                className="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-white font-medium rounded-lg transition-colors"
+              >
                 <Globe className="w-4 h-4" /> Publish
               </button>
             </div>
