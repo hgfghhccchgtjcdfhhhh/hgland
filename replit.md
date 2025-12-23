@@ -20,7 +20,8 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 - **Auto-persistence for packages, SEO, deployment config, and integrations**
 - **Real Replit deployment configuration with actual compute units and VM options**
 - **Interrupted message recovery on reload**
-- **Preview renders all files together (HTML + CSS + JavaScript)**
+- **Unified Preview** - WebContainer serves frontend + backend together as one cohesive app
+- **Real Deployment** - Users can deploy to free subdomains (/deploy/sitename) or connect custom domains
 - Development server running on port 5000
 
 ## Tech Stack
