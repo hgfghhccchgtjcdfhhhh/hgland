@@ -1,13 +1,19 @@
 'use client';
 
-import { useEffect, useState, use, useRef } from 'react';
+import { useEffect, useState, use, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import dynamic from 'next/dynamic';
 import { 
   ArrowLeft, Save, Eye, Code2, Layout, Sparkles, Settings, Globe, Play, Loader2, Send, Waves,
-  FolderPlus, FilePlus, Package, Terminal, Search, Cpu, HardDrive, Zap, Plug, Trash2, ChevronRight, ChevronDown, File, Folder, Code, Box
+  FolderPlus, FilePlus, Package, Terminal, Search, Cpu, HardDrive, Zap, Plug, Trash2, ChevronRight, ChevronDown, File, Folder, Code, Box, RefreshCw, Square
 } from 'lucide-react';
+
+const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { 
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-slate-950 flex items-center justify-center text-cyan-400">Loading Editor...</div>
+});
 
 interface FileItem {
   id: string;
@@ -320,6 +326,13 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const previewRef = useRef<HTMLIFrameElement>(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedCodeRef = useRef<string>('');
+  
+  const [webContainerReady, setWebContainerReady] = useState(false);
+  const [backendRunning, setBackendRunning] = useState(false);
+  const [backendUrl, setBackendUrl] = useState<string | null>(null);
+  const webContainerRef = useRef<unknown>(null);
 
   useEffect(() => {
     async function loadProject() {
@@ -485,6 +498,135 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     }
     setExpandedFolders(newExpanded);
   }
+
+  function getMonacoLanguage(filename: string): string {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    const languageMap: Record<string, string> = {
+      'js': 'javascript', 'mjs': 'javascript', 'cjs': 'javascript',
+      'jsx': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
+      'html': 'html', 'htm': 'html', 'css': 'css', 'scss': 'scss',
+      'less': 'less', 'json': 'json', 'md': 'markdown', 'mdx': 'markdown',
+      'py': 'python', 'rb': 'ruby', 'php': 'php', 'go': 'go',
+      'rs': 'rust', 'java': 'java', 'cpp': 'cpp', 'c': 'c', 'h': 'c',
+      'cs': 'csharp', 'swift': 'swift', 'kt': 'kotlin', 'sql': 'sql',
+      'sh': 'shell', 'bash': 'shell', 'zsh': 'shell', 'yaml': 'yaml',
+      'yml': 'yaml', 'xml': 'xml', 'vue': 'html', 'svelte': 'html',
+      'graphql': 'graphql', 'gql': 'graphql', 'dockerfile': 'dockerfile',
+    };
+    return languageMap[ext] || 'plaintext';
+  }
+
+  const handleCodeChange = useCallback((value: string | undefined) => {
+    const newCode = value || '';
+    setCode(newCode);
+    
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    if (selectedFile && newCode !== lastSavedCodeRef.current) {
+      setSaveStatus('saving');
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        const updated = updateFileContent(files, selectedFile.id, newCode);
+        setFiles(updated);
+        saveProjectData({ files: updated });
+        lastSavedCodeRef.current = newCode;
+      }, 1000);
+    }
+  }, [selectedFile, files]);
+
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (selectedFile) {
+      lastSavedCodeRef.current = code;
+    }
+  }, [selectedFile?.id]);
+
+  const bootWebContainer = useCallback(async () => {
+    if (webContainerRef.current) return webContainerRef.current;
+    
+    try {
+      const { WebContainer } = await import('@webcontainer/api');
+      const instance = await WebContainer.boot();
+      webContainerRef.current = instance;
+      setWebContainerReady(true);
+      return instance;
+    } catch (err) {
+      console.error('Failed to boot WebContainer:', err);
+      return null;
+    }
+  }, []);
+
+  const runBackendInWebContainer = useCallback(async () => {
+    setBackendRunning(true);
+    setBackendUrl('loading');
+    
+    try {
+      const wc = await bootWebContainer() as { 
+        mount: (files: Record<string, unknown>) => Promise<void>;
+        spawn: (cmd: string, args: string[]) => Promise<{ output: ReadableStream; exit: Promise<number> }>;
+        on: (event: string, cb: (port: number, url: string) => void) => void;
+      } | null;
+      if (!wc) {
+        setBackendUrl(null);
+        setBackendRunning(false);
+        return;
+      }
+      
+      const allFiles = getAllFiles(files);
+      const wcFiles: Record<string, unknown> = {};
+      
+      for (const file of allFiles) {
+        const path = file.path.replace(/^\//, '');
+        if (file.type === 'file' && file.content) {
+          wcFiles[path] = { file: { contents: file.content } };
+        }
+      }
+      
+      const hasPackageJson = allFiles.some(f => f.name === 'package.json');
+      if (!hasPackageJson) {
+        wcFiles['package.json'] = {
+          file: {
+            contents: JSON.stringify({
+              name: 'webcontainer-app',
+              type: 'module',
+              dependencies: { express: 'latest' },
+              scripts: { start: 'node server.js' }
+            }, null, 2)
+          }
+        };
+      }
+      
+      await wc.mount(wcFiles);
+      
+      const installProcess = await wc.spawn('npm', ['install']);
+      await installProcess.exit;
+      
+      const serverFile = allFiles.find(f => f.name === 'server.js' || f.name === 'index.js' || f.name === 'app.js');
+      const startScript = serverFile ? serverFile.name : 'server.js';
+      
+      wc.spawn('node', [startScript]);
+      
+      wc.on('server-ready', (_port: number, url: string) => {
+        setBackendUrl(url);
+        if (previewRef.current) {
+          previewRef.current.src = url;
+        }
+      });
+      
+    } catch (err) {
+      console.error('WebContainer error:', err);
+      setBackendUrl(null);
+      setBackendRunning(false);
+    }
+  }, [files, bootWebContainer]);
 
   function getAllFiles(items: FileItem[]): FileItem[] {
     let allFiles: FileItem[] = [];
@@ -1252,38 +1394,114 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                 </div>
               </div>
               <div className="flex-1 flex flex-col">
-                <div className="flex-1 p-4">
-                  <textarea
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    onBlur={() => {
-                      if (selectedFile) {
-                        const updated = updateFileContent(files, selectedFile.id, code);
-                        setFiles(updated);
-                        saveProjectData({ files: updated });
-                      }
-                    }}
-                    className="w-full h-full bg-slate-950 text-cyan-400 font-mono text-sm p-4 rounded-lg border border-cyan-800/50 resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                    spellCheck={false}
-                    placeholder={selectedFile ? `Editing: ${selectedFile.name}` : 'Select a file to edit'}
-                  />
-                </div>
-              </div>
-              <div className="w-1/3 border-l border-cyan-800/30 p-4 flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-medium text-cyan-400">Preview</h3>
+                <div className="h-8 px-4 flex items-center justify-between bg-slate-950 border-b border-cyan-800/30">
+                  <span className="text-xs text-cyan-400 font-mono">
+                    {selectedFile ? selectedFile.path : 'No file selected'}
+                  </span>
                   <div className="flex items-center gap-2">
-                    {saveStatus === 'saving' && <span className="text-xs text-yellow-400">Saving...</span>}
-                    {saveStatus === 'saved' && <span className="text-xs text-green-400">Saved ✓</span>}
-                    {saveStatus === 'error' && <span className="text-xs text-red-400">Error</span>}
+                    {saveStatus === 'saving' && <span className="text-xs text-yellow-400 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Auto-saving...</span>}
+                    {saveStatus === 'saved' && <span className="text-xs text-green-400">Auto-saved ✓</span>}
+                    {saveStatus === 'error' && <span className="text-xs text-red-400">Save error</span>}
                   </div>
                 </div>
-                <iframe
-                  ref={previewRef}
-                  className="flex-1 w-full rounded-lg border border-cyan-800/50 bg-white"
-                  title="HTML Preview"
-                  sandbox="allow-scripts allow-same-origin"
-                />
+                <div className="flex-1">
+                  {selectedFile ? (
+                    <MonacoEditor
+                      height="100%"
+                      language={getMonacoLanguage(selectedFile.name)}
+                      value={code}
+                      onChange={handleCodeChange}
+                      theme="vs-dark"
+                      options={{
+                        minimap: { enabled: true },
+                        fontSize: 14,
+                        fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+                        lineNumbers: 'on',
+                        wordWrap: 'on',
+                        automaticLayout: true,
+                        scrollBeyondLastLine: false,
+                        padding: { top: 16 },
+                        tabSize: 2,
+                        insertSpaces: true,
+                        formatOnPaste: true,
+                        formatOnType: true,
+                        suggestOnTriggerCharacters: true,
+                        quickSuggestions: true,
+                        folding: true,
+                        bracketPairColorization: { enabled: true },
+                      }}
+                    />
+                  ) : (
+                    <div className="h-full flex items-center justify-center bg-slate-950 text-cyan-400/50">
+                      <div className="text-center">
+                        <Code2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>Select a file to start editing</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="w-1/3 border-l border-cyan-800/30 flex flex-col">
+                <div className="h-10 px-4 flex items-center justify-between border-b border-cyan-800/30 bg-slate-950">
+                  <h3 className="text-sm font-medium text-cyan-400">Live Preview</h3>
+                  <div className="flex items-center gap-2">
+                    {backendRunning ? (
+                      <button
+                        onClick={() => { 
+                          setBackendRunning(false); 
+                          setBackendUrl(null);
+                          if (previewRef.current) {
+                            const allFiles = getAllFiles(files);
+                            const previewHTML = buildPreviewHTML(allFiles);
+                            const doc = previewRef.current.contentDocument;
+                            if (doc) { doc.open(); doc.write(previewHTML); doc.close(); }
+                          }
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded text-xs"
+                      >
+                        <Square className="w-3 h-3" /> Stop
+                      </button>
+                    ) : (
+                      <button
+                        onClick={runBackendInWebContainer}
+                        className="flex items-center gap-1 px-2 py-1 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded text-xs"
+                      >
+                        <Play className="w-3 h-3" /> Run
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (previewRef.current) {
+                          const allFiles = getAllFiles(files);
+                          const previewHTML = buildPreviewHTML(allFiles);
+                          const doc = previewRef.current.contentDocument;
+                          if (doc) { doc.open(); doc.write(previewHTML); doc.close(); }
+                        }
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 rounded text-xs"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Refresh
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 p-2">
+                  <iframe
+                    ref={previewRef}
+                    className="w-full h-full rounded-lg border border-cyan-800/50 bg-white"
+                    title="HTML Preview"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                  />
+                </div>
+                {backendUrl === 'loading' && (
+                  <div className="h-8 px-4 flex items-center gap-2 bg-yellow-900/30 border-t border-yellow-800/50 text-yellow-400 text-xs">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Starting Node.js environment...
+                  </div>
+                )}
+                {backendUrl && backendUrl !== 'loading' && (
+                  <div className="h-8 px-4 flex items-center gap-2 bg-green-900/30 border-t border-green-800/50 text-green-400 text-xs">
+                    <Globe className="w-3 h-3" /> Backend running at port 3000
+                  </div>
+                )}
               </div>
             </>
           )}

@@ -9,9 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@openai/agents": "^0.3.7",
     "@tailwindcss/typography": "^0.5.19",
     "@types/bcryptjs": "^2.4.6",
+    "@webcontainer/api": "^1.6.1",
     "bcryptjs": "^3.0.3",
     "drizzle-kit": "^0.31.8",
     "drizzle-orm": "^0.45.1",
