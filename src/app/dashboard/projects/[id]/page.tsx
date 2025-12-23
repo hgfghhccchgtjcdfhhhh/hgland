@@ -571,9 +571,52 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
       ${cssContent}
     `;
 
+    // Detect backend/server code to show warning
+    const hasBackend = allFiles.some(f => 
+      f.content && (
+        f.content.includes('express') || 
+        f.content.includes('require(') || 
+        f.content.includes('app.listen') ||
+        f.content.includes('http.createServer') ||
+        f.content.includes('from "express"') ||
+        f.name.includes('server') ||
+        f.name.includes('backend')
+      )
+    );
+
+    // Helper to clean code for browser execution
+    const cleanForBrowser = (code: string): string => {
+      return code
+        // Remove import/require statements (won't work in browser)
+        .replace(/^import\s+.*?from\s+['"][^'"]+['"];?\s*$/gm, '')
+        .replace(/^import\s+['"][^'"]+['"];?\s*$/gm, '')
+        .replace(/^const\s+\w+\s*=\s*require\(['"][^'"]+['"]\);?\s*$/gm, '')
+        .replace(/^import\s*\{[^}]+\}\s*from\s*['"][^'"]+['"];?\s*$/gm, '')
+        .replace(/^export\s+default\s+/gm, '')
+        .replace(/^export\s+/gm, '')
+        // Remove Node.js specific code
+        .replace(/module\.exports\s*=.*/g, '')
+        .replace(/exports\.\w+\s*=.*/g, '');
+    };
+
     // React/JSX/TSX
     if (hasReact || jsxContent || tsxContent) {
-      const allJsxCode = jsxContent + tsxContent + tsContent + jsContent;
+      // Filter out server/backend files
+      const frontendJsx = jsxContent.split('\n').filter(line => 
+        !line.includes('express') && !line.includes('app.listen') && !line.includes('require(')
+      ).join('\n');
+      const frontendTsx = tsxContent.split('\n').filter(line => 
+        !line.includes('express') && !line.includes('app.listen') && !line.includes('require(')
+      ).join('\n');
+      
+      const allJsxCode = cleanForBrowser(frontendJsx + frontendTsx + tsContent);
+      
+      const backendWarning = hasBackend ? `
+        <div style="background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); border-left: 4px solid #06b6d4; padding: 12px 16px; margin-bottom: 16px; font-size: 14px; color: #94a3b8;">
+          <strong style="color: #06b6d4;">Fullstack App Detected</strong><br/>
+          Express/Node.js backend requires deployment. This preview shows the frontend UI only.
+        </div>` : '';
+      
       return `<!DOCTYPE html>
 <html><head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -583,18 +626,51 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>${baseStyles}</style>
-</head><body>
+</head><body class="bg-gray-900 text-white min-h-screen">
+  ${backendWarning}
   <div id="root"></div>
+  <script>
+    // Mock fetch for API calls in preview mode
+    const originalFetch = window.fetch;
+    window.fetch = async (url, options) => {
+      if (typeof url === 'string' && (url.startsWith('/api') || url.startsWith('http://localhost'))) {
+        console.warn('[Preview] API call mocked:', url);
+        return { ok: true, json: async () => ({ message: 'Mocked response - deploy for real API' }), text: async () => 'Mocked' };
+      }
+      return originalFetch(url, options);
+    };
+  </script>
   <script type="text/babel" data-presets="react,typescript">
     const { useState, useEffect, useRef, useCallback, useMemo, useContext, createContext, useReducer, useLayoutEffect, useImperativeHandle, useDebugValue, useDeferredValue, useTransition, useId, useSyncExternalStore, useInsertionEffect, Fragment, Suspense, lazy, memo, forwardRef, Component, PureComponent, Children, cloneElement, isValidElement, createElement } = React;
+    
     ${allJsxCode}
+    
+    // Find and render the main component
     try {
+      const root = document.getElementById('root');
       if (typeof App !== 'undefined') {
-        ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+        ReactDOM.createRoot(root).render(React.createElement(App));
       } else if (typeof Main !== 'undefined') {
-        ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(Main));
+        ReactDOM.createRoot(root).render(React.createElement(Main));
+      } else if (typeof Calculator !== 'undefined') {
+        ReactDOM.createRoot(root).render(React.createElement(Calculator));
+      } else if (typeof Home !== 'undefined') {
+        ReactDOM.createRoot(root).render(React.createElement(Home));
+      } else if (typeof Index !== 'undefined') {
+        ReactDOM.createRoot(root).render(React.createElement(Index));
+      } else {
+        // Try to find any component function
+        const components = Object.keys(window).filter(k => typeof window[k] === 'function' && /^[A-Z]/.test(k));
+        if (components.length > 0) {
+          ReactDOM.createRoot(root).render(React.createElement(window[components[0]]));
+        } else {
+          root.innerHTML = '<div class="p-8 text-center"><h2 class="text-xl text-cyan-400">No React component found</h2><p class="mt-2 text-gray-400">Create a function named App, Main, or any PascalCase component.</p></div>';
+        }
       }
-    } catch (e) { document.getElementById('root').innerHTML = '<pre style="color:red;padding:20px;white-space:pre-wrap;">' + e.stack + '</pre>'; }
+    } catch (e) { 
+      document.getElementById('root').innerHTML = '<div class="p-4"><div class="text-red-400 font-bold mb-2">React Error:</div><pre class="bg-gray-800 p-4 rounded text-sm overflow-auto text-red-300">' + (e.stack || e.message) + '</pre></div>'; 
+      console.error(e);
+    }
   </script>
 </body></html>`;
     }
