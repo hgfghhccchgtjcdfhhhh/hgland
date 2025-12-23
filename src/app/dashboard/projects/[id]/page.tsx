@@ -46,13 +46,6 @@ interface ResourceConfig {
   gpu: boolean;
   gpuType: string;
   disk: number;
-  cloudProvider?: 'aws' | 'gcp' | 'azure' | 'none';
-  cloudCredentials?: {
-    accessKey?: string;
-    secretKey?: string;
-    projectId?: string;
-    subscriptionId?: string;
-  };
 }
 
 interface IntegrationItem {
@@ -1106,87 +1099,27 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-lg font-medium text-cyan-300 mb-4">Connect Your Cloud Provider</h3>
-                <p className="text-cyan-400/70 text-sm mb-4">Use your own cloud infrastructure (AWS, GCP, Azure) for real resources</p>
-                
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-cyan-200 mb-2">Cloud Provider</label>
-                  <select value={resources.cloudProvider || 'none'} onChange={(e) => {
-                    const updated = {...resources, cloudProvider: e.target.value as 'aws' | 'gcp' | 'azure' | 'none'};
-                    setResources(updated);
-                    saveProjectData({ resources: updated });
-                  }} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                    <option value="none">None (Mock resources)</option>
-                    <option value="aws">Amazon Web Services (AWS)</option>
-                    <option value="gcp">Google Cloud Platform (GCP)</option>
-                    <option value="azure">Microsoft Azure</option>
-                  </select>
+              <div className="p-4 bg-gradient-to-r from-cyan-900/40 to-teal-900/40 rounded-lg border border-cyan-700/50">
+                <h3 className="text-lg font-medium text-cyan-300 mb-2">hgland Infrastructure</h3>
+                <p className="text-cyan-400/70 text-sm mb-4">Your project runs on hgland's high-performance cloud infrastructure with enterprise-grade resources.</p>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <span className="text-cyan-200">Up to 4 TB RAM</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <span className="text-cyan-200">Up to 128 CPU Cores</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <span className="text-cyan-200">Up to 4 PB Storage</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <span className="text-cyan-200">NVIDIA H100 GPUs</span>
+                  </div>
                 </div>
-
-                {resources.cloudProvider === 'aws' && (
-                  <div className="space-y-4 p-4 bg-cyan-900/20 rounded-lg border border-cyan-800/30">
-                    <div>
-                      <label className="block text-sm font-medium text-cyan-200 mb-2">AWS Access Key ID</label>
-                      <input type="password" placeholder="AKIA..." value={resources.cloudCredentials?.accessKey || ''} onChange={(e) => {
-                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, accessKey: e.target.value}};
-                        setResources(updated);
-                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-cyan-200 mb-2">AWS Secret Access Key</label>
-                      <input type="password" placeholder="••••••••••" value={resources.cloudCredentials?.secretKey || ''} onChange={(e) => {
-                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, secretKey: e.target.value}};
-                        setResources(updated);
-                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
-                    </div>
-                  </div>
-                )}
-
-                {resources.cloudProvider === 'gcp' && (
-                  <div className="space-y-4 p-4 bg-cyan-900/20 rounded-lg border border-cyan-800/30">
-                    <div>
-                      <label className="block text-sm font-medium text-cyan-200 mb-2">GCP Project ID</label>
-                      <input type="text" placeholder="my-project-id" value={resources.cloudCredentials?.projectId || ''} onChange={(e) => {
-                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, projectId: e.target.value}};
-                        setResources(updated);
-                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-cyan-200 mb-2">GCP Service Account Key (JSON)</label>
-                      <textarea placeholder='{"type": "service_account", ...}' rows={4} value={resources.cloudCredentials?.secretKey || ''} onChange={(e) => {
-                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, secretKey: e.target.value}};
-                        setResources(updated);
-                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none" />
-                    </div>
-                  </div>
-                )}
-
-                {resources.cloudProvider === 'azure' && (
-                  <div className="space-y-4 p-4 bg-cyan-900/20 rounded-lg border border-cyan-800/30">
-                    <div>
-                      <label className="block text-sm font-medium text-cyan-200 mb-2">Azure Subscription ID</label>
-                      <input type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" value={resources.cloudCredentials?.subscriptionId || ''} onChange={(e) => {
-                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, subscriptionId: e.target.value}};
-                        setResources(updated);
-                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-cyan-200 mb-2">Azure Client ID</label>
-                      <input type="password" placeholder="••••••••••" value={resources.cloudCredentials?.accessKey || ''} onChange={(e) => {
-                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, accessKey: e.target.value}};
-                        setResources(updated);
-                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-cyan-200 mb-2">Azure Client Secret</label>
-                      <input type="password" placeholder="••••••••••" value={resources.cloudCredentials?.secretKey || ''} onChange={(e) => {
-                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, secretKey: e.target.value}};
-                        setResources(updated);
-                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
