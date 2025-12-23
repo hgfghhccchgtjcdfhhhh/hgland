@@ -46,9 +46,13 @@ interface ResourceConfig {
   gpu: boolean;
   gpuType: string;
   disk: number;
-  plan: string;
-  status: 'idle' | 'provisioning' | 'active' | 'scaling';
-  allocatedAt?: string;
+  cloudProvider?: 'aws' | 'gcp' | 'azure' | 'none';
+  cloudCredentials?: {
+    accessKey?: string;
+    secretKey?: string;
+    projectId?: string;
+    subscriptionId?: string;
+  };
 }
 
 interface IntegrationItem {
@@ -80,42 +84,12 @@ interface ChatMessage {
 
 type EditorTab = 'visual' | 'code' | 'ai' | 'languages' | 'packages' | 'terminal' | 'seo' | 'resources' | 'deployment' | 'integrations';
 
-const hgPlans = [
-  { id: 'A', name: 'Plan A', ram: 8, cpu: 1, disk: 50, gpu: false, gpuType: '', price: 0 },
-  { id: 'B', name: 'Plan B', ram: 16, cpu: 2, disk: 100, gpu: false, gpuType: '', price: 5 },
-  { id: 'C', name: 'Plan C', ram: 32, cpu: 4, disk: 250, gpu: false, gpuType: '', price: 15 },
-  { id: 'D', name: 'Plan D', ram: 64, cpu: 8, disk: 500, gpu: false, gpuType: '', price: 35 },
-  { id: 'E', name: 'Plan E', ram: 128, cpu: 16, disk: 1024, gpu: false, gpuType: '', price: 75 },
-  { id: 'F', name: 'Plan F', ram: 256, cpu: 32, disk: 2048, gpu: false, gpuType: '', price: 150 },
-  { id: 'G', name: 'Plan G', ram: 512, cpu: 48, disk: 4096, gpu: false, gpuType: '', price: 300 },
-  { id: 'H', name: 'Plan H', ram: 1024, cpu: 64, disk: 8192, gpu: false, gpuType: '', price: 600 },
-  { id: 'J', name: 'Plan J', ram: 2048, cpu: 96, disk: 16384, gpu: false, gpuType: '', price: 1200 },
-  { id: 'K', name: 'Plan K', ram: 4096, cpu: 128, disk: 32768, gpu: false, gpuType: '', price: 2400 },
-  { id: 'L', name: 'Plan L', ram: 8, cpu: 2, disk: 100, gpu: true, gpuType: 'NVIDIA T4', price: 25 },
-  { id: 'M', name: 'Plan M', ram: 32, cpu: 8, disk: 500, gpu: true, gpuType: 'NVIDIA T4', price: 75 },
-  { id: 'N', name: 'Plan N', ram: 64, cpu: 16, disk: 1024, gpu: true, gpuType: 'NVIDIA RTX 4090', price: 200 },
-  { id: 'O', name: 'Plan O', ram: 128, cpu: 32, disk: 2048, gpu: true, gpuType: 'NVIDIA RTX 4090', price: 400 },
-  { id: 'P', name: 'Plan P', ram: 256, cpu: 48, disk: 4096, gpu: true, gpuType: 'NVIDIA A100', price: 800 },
-  { id: 'Q', name: 'Plan Q', ram: 512, cpu: 64, disk: 8192, gpu: true, gpuType: 'NVIDIA A100', price: 1500 },
-  { id: 'R', name: 'Plan R', ram: 1024, cpu: 96, disk: 16384, gpu: true, gpuType: 'NVIDIA H100', price: 3000 },
-  { id: 'S', name: 'Plan S', ram: 2048, cpu: 128, disk: 32768, gpu: true, gpuType: 'NVIDIA H100', price: 6000 },
-  { id: 'T', name: 'Plan T', ram: 4096, cpu: 128, disk: 65536, gpu: true, gpuType: 'NVIDIA H100', price: 12000 },
-  { id: 'U', name: 'Plan U', ram: 4096, cpu: 128, disk: 131072, gpu: true, gpuType: 'NVIDIA H100 x2', price: 20000 },
-  { id: 'V', name: 'Plan V', ram: 4096, cpu: 128, disk: 262144, gpu: true, gpuType: 'NVIDIA H100 x4', price: 35000 },
-  { id: 'W', name: 'Plan W', ram: 4096, cpu: 128, disk: 524288, gpu: true, gpuType: 'NVIDIA H100 x8', price: 60000 },
-  { id: 'X', name: 'Plan X', ram: 4096, cpu: 128, disk: 1048576, gpu: true, gpuType: 'NVIDIA H100 x16', price: 100000 },
-  { id: 'Y', name: 'Plan Y', ram: 4096, cpu: 128, disk: 2097152, gpu: true, gpuType: 'NVIDIA H100 x32', price: 175000 },
-  { id: 'Z', name: 'Plan Z', ram: 4096, cpu: 128, disk: 4096000, gpu: true, gpuType: 'NVIDIA H100 x64', price: 300000 },
-];
-
 const defaultResources: ResourceConfig = {
-  ram: 8,
-  cpu: 1,
-  gpu: false,
-  gpuType: '',
-  disk: 50,
-  plan: 'A',
-  status: 'idle',
+  ram: 128,
+  cpu: 8,
+  gpu: true,
+  gpuType: 'NVIDIA A100',
+  disk: 500,
   cloudProvider: 'none',
   cloudCredentials: {}
 };
@@ -1132,27 +1106,87 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                 </div>
               </div>
 
-              <div className="p-4 bg-gradient-to-r from-cyan-900/40 to-teal-900/40 rounded-lg border border-cyan-700/50">
-                <h3 className="text-lg font-medium text-cyan-300 mb-2">hgland Infrastructure</h3>
-                <p className="text-cyan-400/70 text-sm mb-4">Your project runs on hgland's high-performance cloud infrastructure with enterprise-grade resources.</p>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                    <span className="text-cyan-200">Up to 4 TB RAM</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                    <span className="text-cyan-200">Up to 128 CPU Cores</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                    <span className="text-cyan-200">Up to 4 PB Storage</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                    <span className="text-cyan-200">NVIDIA H100 GPUs</span>
-                  </div>
+              <div>
+                <h3 className="text-lg font-medium text-cyan-300 mb-4">Connect Your Cloud Provider</h3>
+                <p className="text-cyan-400/70 text-sm mb-4">Use your own cloud infrastructure (AWS, GCP, Azure) for real resources</p>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-cyan-200 mb-2">Cloud Provider</label>
+                  <select value={resources.cloudProvider || 'none'} onChange={(e) => {
+                    const updated = {...resources, cloudProvider: e.target.value as 'aws' | 'gcp' | 'azure' | 'none'};
+                    setResources(updated);
+                    saveProjectData({ resources: updated });
+                  }} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    <option value="none">None (Mock resources)</option>
+                    <option value="aws">Amazon Web Services (AWS)</option>
+                    <option value="gcp">Google Cloud Platform (GCP)</option>
+                    <option value="azure">Microsoft Azure</option>
+                  </select>
                 </div>
+
+                {resources.cloudProvider === 'aws' && (
+                  <div className="space-y-4 p-4 bg-cyan-900/20 rounded-lg border border-cyan-800/30">
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">AWS Access Key ID</label>
+                      <input type="password" placeholder="AKIA..." value={resources.cloudCredentials?.accessKey || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, accessKey: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">AWS Secret Access Key</label>
+                      <input type="password" placeholder="••••••••••" value={resources.cloudCredentials?.secretKey || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, secretKey: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                    </div>
+                  </div>
+                )}
+
+                {resources.cloudProvider === 'gcp' && (
+                  <div className="space-y-4 p-4 bg-cyan-900/20 rounded-lg border border-cyan-800/30">
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">GCP Project ID</label>
+                      <input type="text" placeholder="my-project-id" value={resources.cloudCredentials?.projectId || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, projectId: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">GCP Service Account Key (JSON)</label>
+                      <textarea placeholder='{"type": "service_account", ...}' rows={4} value={resources.cloudCredentials?.secretKey || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, secretKey: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none" />
+                    </div>
+                  </div>
+                )}
+
+                {resources.cloudProvider === 'azure' && (
+                  <div className="space-y-4 p-4 bg-cyan-900/20 rounded-lg border border-cyan-800/30">
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">Azure Subscription ID</label>
+                      <input type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" value={resources.cloudCredentials?.subscriptionId || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, subscriptionId: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">Azure Client ID</label>
+                      <input type="password" placeholder="••••••••••" value={resources.cloudCredentials?.accessKey || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, accessKey: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-cyan-200 mb-2">Azure Client Secret</label>
+                      <input type="password" placeholder="••••••••••" value={resources.cloudCredentials?.secretKey || ''} onChange={(e) => {
+                        const updated = {...resources, cloudCredentials: {...resources.cloudCredentials, secretKey: e.target.value}};
+                        setResources(updated);
+                      }} onBlur={() => saveProjectData({ resources })} className="w-full px-4 py-2 bg-cyan-900/30 border border-cyan-800/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
