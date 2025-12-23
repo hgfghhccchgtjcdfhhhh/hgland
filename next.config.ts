@@ -15,8 +15,6 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [
           { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
-          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         ],
       },
     ];

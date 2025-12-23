@@ -609,10 +609,21 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
       const installProcess = await wc.spawn('npm', ['install']);
       await installProcess.exit;
       
-      const serverFile = allFiles.find(f => f.name === 'server.js' || f.name === 'index.js' || f.name === 'app.js');
-      const startScript = serverFile ? serverFile.name : 'server.js';
+      const serverFile = allFiles.find(f => 
+        f.name === 'server.js' || f.name === 'index.js' || f.name === 'app.js' ||
+        f.path.includes('server') || f.path.includes('backend')
+      );
+      const startScript = serverFile ? serverFile.path.replace(/^\//, '') : 'server.js';
       
-      wc.spawn('node', [startScript]);
+      const hasPackageJsonWithStart = allFiles.some(f => 
+        f.name === 'package.json' && f.content?.includes('"start"')
+      );
+      
+      if (hasPackageJsonWithStart) {
+        wc.spawn('npm', ['start']);
+      } else {
+        wc.spawn('node', [startScript]);
+      }
       
       wc.on('server-ready', (_port: number, url: string) => {
         setBackendUrl(url);
