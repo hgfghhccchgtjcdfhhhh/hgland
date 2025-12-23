@@ -76,6 +76,9 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 - **projects**: id, userId, name, description, status, siteConfig, pages, files, packages, seoSettings, deploymentConfig, integrations, terminalHistory, timestamps
 - **deployments**: id, projectId, status, url, buildLog, createdAt
 - **chatMessages**: id, projectId, role, content, createdAt
+- **agentMemory**: id, projectId, memoryType, category, content, metadata, importance, timestamps (stores agent memories for context)
+- **agentExecutions**: id, projectId, userGoal, plan, executionSteps, evaluationResults, finalOutcome, lessonsLearned, totalIterations, timestamps (tracks autonomous executions)
+- **agentLearnings**: id, projectId, executionId, learningType, pattern, insight, successRate, applicableContexts, createdAt (stores learned patterns)
 
 ## Features Implemented
 
@@ -96,8 +99,41 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 8. **Deployment Config**: Real Replit deployment options (Autoscale, VM, Static, Scheduled) with CPU/RAM configurations
 9. **Integrations**: 50+ integrations (Google Analytics, Stripe, Auth0, Firebase, Supabase, Telegram, Twilio, SendGrid, etc.)
 
-### AI Agent Capabilities (Fully Autonomous)
-The hgland Agent (powered by GPT-5.1 Codex Max) is a fully autonomous agent with 6 tools:
+### AI Agent Capabilities (Level 4 Fully Autonomous)
+The hgland Agent (powered by GPT-5.1 Codex Max) is a **Level 4 Fully Autonomous Agent** with strategic planning, iterative execution, self-evaluation, and learning capabilities.
+
+**Autonomous Execution Architecture:**
+1. **Strategic Planning Phase**: Separate LLM call (GPT-4o) generates structured ExecutionPlan with:
+   - Goal decomposition into ordered subtasks
+   - Dependency tracking between steps
+   - Complexity estimation (simple/moderate/complex)
+   - Proactive enhancements beyond user request
+
+2. **Iterative Execution Engine**: Step-by-step execution with:
+   - Per-step tool tracking with stepId association
+   - Retry logic (up to 2 retries per failed step)
+   - toolResults cleared between retry attempts for accurate evaluation
+   - Dependency checking before each step
+
+3. **Per-Step Self-Evaluation**: After each step:
+   - evaluateStep() assesses success/failure based on tool results
+   - Score calculation (0-100) based on successful vs failed tools
+   - Issues collection for failed operations
+
+4. **Outcome Verification**: Separate LLM call evaluates:
+   - Overall goal achievement
+   - Completeness percentage
+   - Gaps and suggestions for improvement
+
+5. **Memory System**: Persists to database:
+   - Execution summaries with plan details
+   - Proactive enhancements applied
+   - Context from past sessions retrieved for future runs
+
+6. **Learning System**: Stores patterns for future:
+   - Success patterns (what worked)
+   - Failure patterns (what to avoid)
+   - Insights derived from executions
 
 **Tools Available:**
 1. **generate_image**: Generate images using gpt-image-1 via Replit AI Integrations
@@ -108,20 +144,23 @@ The hgland Agent (powered by GPT-5.1 Codex Max) is a fully autonomous agent with
 6. **run_terminal**: Execute terminal commands
 7. **install_package**: Install npm packages
 8. **list_files**: List project files
+9. **complete_step**: Signal step completion for evaluation
 
 **Key Features:**
-- **Context Compaction**: Automatically summarizes older messages when >20 messages, enabling indefinite sessions
-- **Autonomous Execution**: Plans and executes multi-step tasks without user intervention
-- **Image Generation**: Uses Replit AI Integrations (AI_INTEGRATIONS_OPENAI_BASE_URL/API_KEY) - charges to Replit credits
-- **Virtual Filesystem**: Files stored in PostgreSQL database as JSON, not on disk
+- **Context Compaction**: Automatically summarizes older messages when >20 messages
+- **Step-by-Step Execution**: Each plan step executed and evaluated independently
+- **Retry with Recovery**: Failed steps retry up to 2 times with fresh evaluation
+- **Image Generation**: Uses Replit AI Integrations (charges to Replit credits)
+- **Virtual Filesystem**: Files stored in PostgreSQL database as JSON
 
 **Capabilities:**
-- Have natural conversations with users
+- Strategic planning before execution
+- Self-evaluation and self-correction
+- Learning from past successes and failures
+- Proactive enhancement beyond user requests
 - Generate complete websites with images from natural language
 - Create responsive designs with Tailwind CSS
 - Build multi-page websites with proper structure
-- Generate and manage images for websites
-- Install packages and run build commands
 
 ## Development
 - Run `npm run dev` to start the development server on port 5000
