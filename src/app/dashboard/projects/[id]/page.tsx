@@ -501,124 +501,340 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
   function buildPreviewHTML(allFiles: FileItem[]): string {
     let htmlContent = '';
     let cssContent = '';
+    let scssContent = '';
+    let lessContent = '';
     let jsContent = '';
     let jsxContent = '';
     let tsxContent = '';
+    let tsContent = '';
+    let coffeeContent = '';
+    let svelteContent = '';
+    let vueContent = '';
+    let mdContent = '';
+    let jsonContent: Record<string, string> = {};
+    let pythonContent = '';
+    let rubyContent = '';
+    let phpContent = '';
+    let goContent = '';
+    let rustContent = '';
+    let javaContent = '';
+    let cppContent = '';
+    let cContent = '';
 
-    // Detect framework usage
+    // Detect framework/language usage
     const hasReact = allFiles.some(f => 
       f.name.endsWith('.jsx') || f.name.endsWith('.tsx') || 
-      (f.content && f.content.includes('import React')) ||
-      (f.content && f.content.includes('from "react"')) ||
-      (f.content && f.content.includes("from 'react'"))
+      (f.content && (f.content.includes('import React') || f.content.includes('from "react"') || f.content.includes("from 'react'")))
     );
     const hasVue = allFiles.some(f => f.name.endsWith('.vue'));
-    // Svelte support planned for future
-    const _hasSvelte = allFiles.some(f => f.name.endsWith('.svelte'));
-    void _hasSvelte;
+    const hasSvelte = allFiles.some(f => f.name.endsWith('.svelte'));
+    const hasAngular = allFiles.some(f => f.content && (f.content.includes('@angular') || f.content.includes('ng-')));
+    const hasSolid = allFiles.some(f => f.content && f.content.includes('solid-js'));
+    const hasPreact = allFiles.some(f => f.content && f.content.includes('preact'));
+    const hasLit = allFiles.some(f => f.content && f.content.includes('lit'));
+    const hasAlpine = allFiles.some(f => f.content && (f.content.includes('x-data') || f.content.includes('alpine')));
+    const hasThree = allFiles.some(f => f.content && f.content.includes('three'));
+    const hasPython = allFiles.some(f => f.name.endsWith('.py'));
+    const hasMarkdown = allFiles.some(f => f.name.endsWith('.md') || f.name.endsWith('.mdx'));
 
     // Collect files by type
     for (const file of allFiles) {
       const content = file.content || '';
-      if (file.name.endsWith('.html')) {
-        htmlContent = content;
-      } else if (file.name.endsWith('.css')) {
-        cssContent += content + '\n';
-      } else if (file.name.endsWith('.jsx')) {
-        jsxContent += `// File: ${file.name}\n${content}\n`;
-      } else if (file.name.endsWith('.tsx')) {
-        tsxContent += `// File: ${file.name}\n${content}\n`;
-      } else if (file.name.endsWith('.js') || file.name.endsWith('.ts')) {
-        jsContent += content + '\n';
-      }
+      const name = file.name.toLowerCase();
+      
+      if (name.endsWith('.html') || name.endsWith('.htm')) htmlContent = content;
+      else if (name.endsWith('.css')) cssContent += content + '\n';
+      else if (name.endsWith('.scss') || name.endsWith('.sass')) scssContent += content + '\n';
+      else if (name.endsWith('.less')) lessContent += content + '\n';
+      else if (name.endsWith('.jsx')) jsxContent += `// File: ${file.name}\n${content}\n`;
+      else if (name.endsWith('.tsx')) tsxContent += `// File: ${file.name}\n${content}\n`;
+      else if (name.endsWith('.ts') && !name.endsWith('.d.ts')) tsContent += `// File: ${file.name}\n${content}\n`;
+      else if (name.endsWith('.js') || name.endsWith('.mjs')) jsContent += content + '\n';
+      else if (name.endsWith('.coffee')) coffeeContent += content + '\n';
+      else if (name.endsWith('.svelte')) svelteContent += content + '\n';
+      else if (name.endsWith('.vue')) vueContent += content + '\n';
+      else if (name.endsWith('.md') || name.endsWith('.mdx')) mdContent += content + '\n';
+      else if (name.endsWith('.json')) { try { jsonContent[file.name] = content; } catch {} }
+      else if (name.endsWith('.py')) pythonContent += `# File: ${file.name}\n${content}\n`;
+      else if (name.endsWith('.rb')) rubyContent += `# File: ${file.name}\n${content}\n`;
+      else if (name.endsWith('.php')) phpContent += `// File: ${file.name}\n${content}\n`;
+      else if (name.endsWith('.go')) goContent += `// File: ${file.name}\n${content}\n`;
+      else if (name.endsWith('.rs')) rustContent += `// File: ${file.name}\n${content}\n`;
+      else if (name.endsWith('.java')) javaContent += `// File: ${file.name}\n${content}\n`;
+      else if (name.endsWith('.cpp') || name.endsWith('.cc') || name.endsWith('.cxx')) cppContent += `// File: ${file.name}\n${content}\n`;
+      else if (name.endsWith('.c') || name.endsWith('.h')) cContent += `// File: ${file.name}\n${content}\n`;
     }
 
-    // Build HTML based on framework
+    const baseStyles = `
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+      ${cssContent}
+    `;
+
+    // React/JSX/TSX
     if (hasReact || jsxContent || tsxContent) {
-      // React/JSX support with Babel standalone compilation
-      const allJsxCode = jsxContent + tsxContent + jsContent;
+      const allJsxCode = jsxContent + tsxContent + tsContent + jsContent;
       return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html><head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>React Preview</title>
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; }
-    ${cssContent}
-  </style>
-</head>
-<body>
+  <style>${baseStyles}</style>
+</head><body>
   <div id="root"></div>
   <script type="text/babel" data-presets="react,typescript">
-    const { useState, useEffect, useRef, useCallback, useMemo, useContext, createContext } = React;
-    
+    const { useState, useEffect, useRef, useCallback, useMemo, useContext, createContext, useReducer, useLayoutEffect, useImperativeHandle, useDebugValue, useDeferredValue, useTransition, useId, useSyncExternalStore, useInsertionEffect, Fragment, Suspense, lazy, memo, forwardRef, Component, PureComponent, Children, cloneElement, isValidElement, createElement } = React;
     ${allJsxCode}
-    
-    // Auto-render App or first component
     try {
       if (typeof App !== 'undefined') {
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(App));
+        ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+      } else if (typeof Main !== 'undefined') {
+        ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(Main));
       }
-    } catch (e) {
-      document.getElementById('root').innerHTML = '<pre style="color:red;padding:20px;">' + e.message + '</pre>';
-      console.error(e);
-    }
+    } catch (e) { document.getElementById('root').innerHTML = '<pre style="color:red;padding:20px;white-space:pre-wrap;">' + e.stack + '</pre>'; }
   </script>
-</body>
-</html>`;
+</body></html>`;
     }
 
-    if (hasVue) {
-      // Vue 3 support
-      const vueFile = allFiles.find(f => f.name.endsWith('.vue'));
-      const vueContent = vueFile?.content || '';
+    // Preact
+    if (hasPreact) {
+      const allCode = jsxContent + tsxContent + jsContent;
       return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Vue Preview</title>
+<html><head>
+  <meta charset="UTF-8"><title>Preact Preview</title>
+  <script src="https://unpkg.com/preact@10/dist/preact.umd.js"></script>
+  <script src="https://unpkg.com/preact@10/hooks/dist/hooks.umd.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>${baseStyles}</style>
+</head><body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react">
+    const { h, render, Component } = preact;
+    const { useState, useEffect, useRef, useCallback, useMemo } = preactHooks;
+    ${allCode}
+    try { if (typeof App !== 'undefined') render(h(App), document.getElementById('root')); } catch(e) { document.getElementById('root').innerHTML = '<pre style="color:red">' + e.message + '</pre>'; }
+  </script>
+</body></html>`;
+    }
+
+    // Solid.js
+    if (hasSolid) {
+      return `<!DOCTYPE html>
+<html><head>
+  <meta charset="UTF-8"><title>Solid Preview</title>
+  <script src="https://unpkg.com/solid-js@1/dist/solid.cjs"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>${baseStyles}</style>
+</head><body>
+  <div id="root"></div>
+  <script type="module">
+    import { render, createSignal, createEffect, createMemo, onMount, onCleanup, Show, For, Switch, Match } from 'https://esm.sh/solid-js@1';
+    import { Dynamic, Portal } from 'https://esm.sh/solid-js@1/web';
+    ${jsxContent + jsContent}
+    try { if (typeof App !== 'undefined') render(App, document.getElementById('root')); } catch(e) { console.error(e); }
+  </script>
+</body></html>`;
+    }
+
+    // Vue 3
+    if (hasVue || vueContent) {
+      const vueScriptMatch = vueContent.match(/<script[^>]*>([\s\S]*?)<\/script>/);
+      const vueTemplateMatch = vueContent.match(/<template[^>]*>([\s\S]*?)<\/template>/);
+      const vueStyleMatch = vueContent.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+      return `<!DOCTYPE html>
+<html><head>
+  <meta charset="UTF-8"><title>Vue Preview</title>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>${cssContent}</style>
-</head>
-<body>
-  <div id="app"></div>
+  <style>${baseStyles}${vueStyleMatch?.[1] || ''}</style>
+</head><body>
+  <div id="app">${vueTemplateMatch?.[1] || ''}</div>
   <script>
-    const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
+    const { createApp, ref, reactive, computed, watch, watchEffect, onMounted, onUnmounted, onBeforeMount, onBeforeUnmount, nextTick, provide, inject, toRef, toRefs, shallowRef, triggerRef, customRef, markRaw, toRaw, isRef, unref, proxyRefs, shallowReactive, shallowReadonly, readonly, isProxy, isReactive, isReadonly } = Vue;
     ${jsContent}
-    ${vueContent.includes('<script>') ? vueContent.match(/<script>([\s\S]*?)<\/script>/)?.[1] || '' : ''}
+    ${vueScriptMatch?.[1] || ''}
+    try {
+      const app = createApp(typeof App !== 'undefined' ? App : { data() { return {} } });
+      app.mount('#app');
+    } catch(e) { document.getElementById('app').innerHTML = '<pre style="color:red">' + e.message + '</pre>'; }
   </script>
-</body>
-</html>`;
+</body></html>`;
     }
 
-    // Default: plain HTML/CSS/JS
+    // Svelte (limited browser support via svelte/compiler)
+    if (hasSvelte || svelteContent) {
+      return `<!DOCTYPE html>
+<html><head>
+  <meta charset="UTF-8"><title>Svelte Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>${baseStyles}</style>
+</head><body>
+  <div id="app"></div>
+  <script type="module">
+    import * as svelte from 'https://esm.sh/svelte@4';
+    const svelteCode = ${JSON.stringify(svelteContent)};
+    document.getElementById('app').innerHTML = '<div class="p-4"><h2 class="text-xl font-bold text-cyan-400">Svelte Preview</h2><p class="text-gray-300 mt-2">Svelte requires compilation. Code detected:</p><pre class="mt-4 p-4 bg-gray-800 rounded text-sm overflow-auto text-green-400">' + svelteCode.replace(/</g, '&lt;').slice(0, 2000) + '</pre></div>';
+  </script>
+</body></html>`;
+    }
+
+    // Angular (limited - shows code)
+    if (hasAngular) {
+      return `<!DOCTYPE html>
+<html><head>
+  <meta charset="UTF-8"><title>Angular Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>${baseStyles}</style>
+</head><body>
+  <div id="app" class="p-4">
+    <h2 class="text-xl font-bold text-red-400">Angular Preview</h2>
+    <p class="text-gray-300 mt-2">Angular requires full build toolchain. TypeScript code detected:</p>
+    <pre class="mt-4 p-4 bg-gray-800 rounded text-sm overflow-auto text-green-400">${(tsContent + tsxContent).replace(/</g, '&lt;').slice(0, 3000)}</pre>
+  </div>
+</body></html>`;
+    }
+
+    // Lit
+    if (hasLit) {
+      return `<!DOCTYPE html>
+<html><head>
+  <meta charset="UTF-8"><title>Lit Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>${baseStyles}</style>
+</head><body>
+  <div id="app"></div>
+  <script type="module">
+    import { LitElement, html, css } from 'https://esm.sh/lit@3';
+    import { customElement, property, state } from 'https://esm.sh/lit@3/decorators.js';
+    ${jsContent + tsContent}
+    document.getElementById('app').innerHTML = '<my-app></my-app>';
+  </script>
+</body></html>`;
+    }
+
+    // Alpine.js
+    if (hasAlpine) {
+      return `<!DOCTYPE html>
+<html><head>
+  <meta charset="UTF-8"><title>Alpine Preview</title>
+  <script defer src="https://unpkg.com/alpinejs@3/dist/cdn.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>${baseStyles}</style>
+</head><body>
+  ${htmlContent || '<div x-data="{ open: false }"><button @click="open = !open">Toggle</button><div x-show="open">Hello Alpine!</div></div>'}
+  <script>${jsContent}</script>
+</body></html>`;
+    }
+
+    // Three.js
+    if (hasThree) {
+      return `<!DOCTYPE html>
+<html><head>
+  <meta charset="UTF-8"><title>Three.js Preview</title>
+  <style>body { margin: 0; } canvas { display: block; }</style>
+</head><body>
+  <script type="module">
+    import * as THREE from 'https://esm.sh/three@0.160';
+    import { OrbitControls } from 'https://esm.sh/three@0.160/examples/jsm/controls/OrbitControls.js';
+    ${jsContent}
+  </script>
+</body></html>`;
+    }
+
+    // Markdown
+    if (hasMarkdown && mdContent) {
+      return `<!DOCTYPE html>
+<html><head>
+  <meta charset="UTF-8"><title>Markdown Preview</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>${baseStyles} .prose { max-width: 65ch; margin: 0 auto; padding: 2rem; }</style>
+</head><body>
+  <article id="content" class="prose prose-invert"></article>
+  <script>
+    document.getElementById('content').innerHTML = marked.parse(${JSON.stringify(mdContent)});
+  </script>
+</body></html>`;
+    }
+
+    // Python (via Pyodide)
+    if (hasPython && pythonContent) {
+      return `<!DOCTYPE html>
+<html><head>
+  <meta charset="UTF-8"><title>Python Preview</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>${baseStyles}</style>
+</head><body>
+  <div id="output" class="p-4 font-mono text-green-400 bg-gray-900 min-h-screen whitespace-pre-wrap"></div>
+  <script>
+    async function runPython() {
+      const output = document.getElementById('output');
+      output.textContent = 'Loading Python (Pyodide)...\\n';
+      try {
+        const pyodide = await loadPyodide();
+        pyodide.setStdout({ batched: (msg) => { output.textContent += msg + '\\n'; } });
+        pyodide.setStderr({ batched: (msg) => { output.textContent += 'Error: ' + msg + '\\n'; } });
+        output.textContent += 'Running Python code...\\n\\n';
+        await pyodide.runPythonAsync(${JSON.stringify(pythonContent)});
+      } catch(e) { output.textContent += 'Error: ' + e.message; }
+    }
+    runPython();
+  </script>
+</body></html>`;
+    }
+
+    // Backend languages (show code with syntax highlighting)
+    if (rubyContent || phpContent || goContent || rustContent || javaContent || cppContent || cContent) {
+      const lang = rubyContent ? 'Ruby' : phpContent ? 'PHP' : goContent ? 'Go' : rustContent ? 'Rust' : javaContent ? 'Java' : cppContent ? 'C++' : 'C';
+      const code = rubyContent || phpContent || goContent || rustContent || javaContent || cppContent || cContent;
+      return `<!DOCTYPE html>
+<html><head>
+  <meta charset="UTF-8"><title>${lang} Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>${baseStyles}</style>
+</head><body class="bg-gray-900 p-4">
+  <h2 class="text-xl font-bold text-cyan-400 mb-4">${lang} Code Preview</h2>
+  <p class="text-gray-400 text-sm mb-4">${lang} requires server-side execution. Showing code with syntax highlighting:</p>
+  <pre><code class="language-${lang.toLowerCase()}">${code.replace(/</g, '&lt;')}</code></pre>
+  <script>hljs.highlightAll();</script>
+</body></html>`;
+    }
+
+    // Default: plain HTML/CSS/JS with TypeScript support
     if (!htmlContent) {
-      htmlContent = '<!DOCTYPE html>\n<html>\n<head><title>Preview</title></head>\n<body></body>\n</html>';
+      htmlContent = `<!DOCTYPE html>
+<html><head><title>Preview</title><script src="https://cdn.tailwindcss.com"></script></head><body></body></html>`;
     }
 
-    const headEndIndex = htmlContent.indexOf('</head>');
-    const bodyEndIndex = htmlContent.lastIndexOf('</body>');
+    // Add TypeScript compilation if needed
+    const allScripts = jsContent + tsContent;
+    const needsBabel = tsContent.length > 0;
 
-    if (headEndIndex !== -1 && cssContent) {
-      htmlContent = htmlContent.slice(0, headEndIndex) + 
-        `<style>\n${cssContent}\n</style>\n` + 
-        htmlContent.slice(headEndIndex);
+    let headEnd = htmlContent.indexOf('</head>');
+    let bodyEnd = htmlContent.lastIndexOf('</body>');
+
+    if (headEnd !== -1 && (cssContent || scssContent || lessContent)) {
+      htmlContent = htmlContent.slice(0, headEnd) + `<style>${cssContent}${scssContent}${lessContent}</style>` + htmlContent.slice(headEnd);
+      headEnd = htmlContent.indexOf('</head>');
+      bodyEnd = htmlContent.lastIndexOf('</body>');
     }
 
-    if (bodyEndIndex !== -1 && jsContent) {
-      htmlContent = htmlContent.slice(0, bodyEndIndex) + 
-        `<script>\n${jsContent}\n</script>\n` + 
-        htmlContent.slice(bodyEndIndex);
-    } else if (jsContent) {
-      htmlContent = htmlContent.slice(0, -7) + `<script>\n${jsContent}\n</script>\n</html>`;
+    if (needsBabel && headEnd !== -1) {
+      htmlContent = htmlContent.slice(0, headEnd) + `<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>` + htmlContent.slice(headEnd);
+      headEnd = htmlContent.indexOf('</head>');
+      bodyEnd = htmlContent.lastIndexOf('</body>');
+    }
+
+    if (bodyEnd !== -1 && allScripts) {
+      const scriptType = needsBabel ? 'text/babel" data-presets="typescript' : 'text/javascript';
+      htmlContent = htmlContent.slice(0, bodyEnd) + `<script type="${scriptType}">${allScripts}</script>` + htmlContent.slice(bodyEnd);
     }
 
     return htmlContent;
