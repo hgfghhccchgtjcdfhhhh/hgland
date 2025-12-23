@@ -1056,27 +1056,27 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-cyan-200 mb-2">RAM: {resources.ram} GB</label>
-                    <input type="range" min="8" max="128" step="8" value={resources.ram} onChange={(e) => {
+                    <input type="range" min="8" max="512" step="8" value={resources.ram} onChange={(e) => {
                       const updated = {...resources, ram: parseInt(e.target.value)};
                       setResources(updated);
                     }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
-                    <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>8 GB</span><span>128 GB</span></div>
+                    <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>8 GB</span><span>512 GB</span></div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-cyan-200 mb-2">CPU Cores: {resources.cpu}</label>
-                    <input type="range" min="1" max="16" value={resources.cpu} onChange={(e) => {
+                    <input type="range" min="1" max="128" step="1" value={resources.cpu} onChange={(e) => {
                       const updated = {...resources, cpu: parseInt(e.target.value)};
                       setResources(updated);
                     }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
-                    <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>1 core</span><span>16 cores</span></div>
+                    <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>1 core</span><span>128 cores</span></div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-cyan-200 mb-2">Disk Storage: {resources.disk} GB</label>
-                    <input type="range" min="50" max="10000" step="50" value={resources.disk} onChange={(e) => {
+                    <label className="block text-sm font-medium text-cyan-200 mb-2">Disk Storage: {resources.disk} GB ({(resources.disk / 1024).toFixed(1)} TB)</label>
+                    <input type="range" min="50" max="4096000" step="100" value={resources.disk} onChange={(e) => {
                       const updated = {...resources, disk: parseInt(e.target.value)};
                       setResources(updated);
                     }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
-                    <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>50 GB</span><span>10 TB</span></div>
+                    <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>50 GB</span><span>4 PB</span></div>
                   </div>
                   <div>
                     <label className="flex items-center gap-3 cursor-pointer">
