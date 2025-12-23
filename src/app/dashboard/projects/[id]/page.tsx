@@ -45,7 +45,11 @@ interface ResourceConfig {
   cpu: number;
   gpu: boolean;
   gpuType: string;
+  gpuCount: number;
+  gpuMemory: number;
   disk: number;
+  networkBandwidth: number;
+  aiModelTier?: 'standard' | 'enterprise' | 'ai-lab-175b' | 'ai-lab-540b' | 'ai-lab-1t' | 'custom';
   cloudProvider?: 'aws' | 'gcp' | 'azure' | 'none';
   cloudCredentials?: {
     accessKey?: string;
@@ -89,9 +93,22 @@ const defaultResources: ResourceConfig = {
   cpu: 8,
   gpu: true,
   gpuType: 'NVIDIA A100',
+  gpuCount: 1,
+  gpuMemory: 80,
   disk: 500,
+  networkBandwidth: 100,
+  aiModelTier: 'standard',
   cloudProvider: 'none',
   cloudCredentials: {}
+};
+
+const aiModelPresets = {
+  'standard': { name: 'Standard', ram: 128, cpu: 8, gpuCount: 1, gpuType: 'NVIDIA A100', gpuMemory: 80, disk: 500, networkBandwidth: 100, description: 'Small models up to 7B parameters' },
+  'enterprise': { name: 'Enterprise', ram: 512, cpu: 32, gpuCount: 4, gpuType: 'NVIDIA A100', gpuMemory: 320, disk: 2000, networkBandwidth: 400, description: 'Medium models 7B-70B parameters' },
+  'ai-lab-175b': { name: 'AI Lab (175B)', ram: 2048, cpu: 64, gpuCount: 8, gpuType: 'NVIDIA H100', gpuMemory: 640, disk: 50000, networkBandwidth: 3200, description: 'GPT-3 scale models (175B params, 50k tokens)' },
+  'ai-lab-540b': { name: 'AI Lab (540B)', ram: 4096, cpu: 128, gpuCount: 16, gpuType: 'NVIDIA H100 NVL', gpuMemory: 1536, disk: 500000, networkBandwidth: 6400, description: 'PaLM scale models (540B params, 100k tokens)' },
+  'ai-lab-1t': { name: 'AI Lab (1T+)', ram: 8192, cpu: 256, gpuCount: 64, gpuType: 'NVIDIA B200 Cluster', gpuMemory: 11520, disk: 4096000, networkBandwidth: 25600, description: 'Trillion parameter models (1T+ params, 200k tokens, billions of facts)' },
+  'custom': { name: 'Custom', ram: 128, cpu: 8, gpuCount: 1, gpuType: 'NVIDIA A100', gpuMemory: 80, disk: 500, networkBandwidth: 100, description: 'Configure your own resources' }
 };
 
 const defaultDeployment: DeploymentConfig = {
