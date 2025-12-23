@@ -1055,7 +1055,7 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                 <h3 className="text-lg font-medium text-cyan-300 mb-4">Resource Configuration</h3>
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-cyan-200 mb-2">RAM: {resources.ram >= 1024 ? (resources.ram / 1024).toFixed(1) + ' TB' : resources.ram + ' GB'}</label>
+                    <label className="block text-sm font-medium text-cyan-200 mb-2">RAM: {resources.ram >= 1024 ? (resources.ram % 1024 === 0 ? (resources.ram / 1024) : (resources.ram / 1024).toFixed(1)) + ' TB' : resources.ram + ' GB'}</label>
                     <input type="range" min="8" max="4096" step="8" value={resources.ram} onChange={(e) => {
                       const updated = {...resources, ram: parseInt(e.target.value)};
                       setResources(updated);
