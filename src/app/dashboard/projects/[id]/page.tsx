@@ -502,25 +502,108 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
     let htmlContent = '';
     let cssContent = '';
     let jsContent = '';
+    let jsxContent = '';
+    let tsxContent = '';
 
-    // Collect HTML, CSS, and JS files
+    // Detect framework usage
+    const hasReact = allFiles.some(f => 
+      f.name.endsWith('.jsx') || f.name.endsWith('.tsx') || 
+      (f.content && f.content.includes('import React')) ||
+      (f.content && f.content.includes('from "react"')) ||
+      (f.content && f.content.includes("from 'react'"))
+    );
+    const hasVue = allFiles.some(f => f.name.endsWith('.vue'));
+    // Svelte support planned for future
+    const _hasSvelte = allFiles.some(f => f.name.endsWith('.svelte'));
+    void _hasSvelte;
+
+    // Collect files by type
     for (const file of allFiles) {
       const content = file.content || '';
       if (file.name.endsWith('.html')) {
-        htmlContent = content; // Use first HTML file as base
+        htmlContent = content;
       } else if (file.name.endsWith('.css')) {
         cssContent += content + '\n';
-      } else if (file.name.endsWith('.js')) {
+      } else if (file.name.endsWith('.jsx')) {
+        jsxContent += `// File: ${file.name}\n${content}\n`;
+      } else if (file.name.endsWith('.tsx')) {
+        tsxContent += `// File: ${file.name}\n${content}\n`;
+      } else if (file.name.endsWith('.js') || file.name.endsWith('.ts')) {
         jsContent += content + '\n';
       }
     }
 
-    // If no HTML file, create a basic structure
+    // Build HTML based on framework
+    if (hasReact || jsxContent || tsxContent) {
+      // React/JSX support with Babel standalone compilation
+      const allJsxCode = jsxContent + tsxContent + jsContent;
+      return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>React Preview</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; }
+    ${cssContent}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react,typescript">
+    const { useState, useEffect, useRef, useCallback, useMemo, useContext, createContext } = React;
+    
+    ${allJsxCode}
+    
+    // Auto-render App or first component
+    try {
+      if (typeof App !== 'undefined') {
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(App));
+      }
+    } catch (e) {
+      document.getElementById('root').innerHTML = '<pre style="color:red;padding:20px;">' + e.message + '</pre>';
+      console.error(e);
+    }
+  </script>
+</body>
+</html>`;
+    }
+
+    if (hasVue) {
+      // Vue 3 support
+      const vueFile = allFiles.find(f => f.name.endsWith('.vue'));
+      const vueContent = vueFile?.content || '';
+      return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Vue Preview</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>${cssContent}</style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
+    ${jsContent}
+    ${vueContent.includes('<script>') ? vueContent.match(/<script>([\s\S]*?)<\/script>/)?.[1] || '' : ''}
+  </script>
+</body>
+</html>`;
+    }
+
+    // Default: plain HTML/CSS/JS
     if (!htmlContent) {
       htmlContent = '<!DOCTYPE html>\n<html>\n<head><title>Preview</title></head>\n<body></body>\n</html>';
     }
 
-    // Insert CSS and JS into HTML
     const headEndIndex = htmlContent.indexOf('</head>');
     const bodyEndIndex = htmlContent.lastIndexOf('</body>');
 
