@@ -48,6 +48,44 @@ export const chatMessages = pgTable('chat_messages', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const agentMemory = pgTable('agent_memory', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').references(() => projects.id).notNull(),
+  memoryType: varchar('memory_type', { length: 50 }).notNull(),
+  category: varchar('category', { length: 100 }),
+  content: text('content').notNull(),
+  metadata: jsonb('metadata'),
+  importance: varchar('importance', { length: 20 }).default('medium'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  lastAccessedAt: timestamp('last_accessed_at').defaultNow(),
+});
+
+export const agentExecutions = pgTable('agent_executions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').references(() => projects.id).notNull(),
+  userGoal: text('user_goal').notNull(),
+  plan: jsonb('plan'),
+  executionSteps: jsonb('execution_steps'),
+  evaluationResults: jsonb('evaluation_results'),
+  finalOutcome: varchar('final_outcome', { length: 50 }),
+  lessonsLearned: jsonb('lessons_learned'),
+  totalIterations: varchar('total_iterations', { length: 10 }),
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+});
+
+export const agentLearnings = pgTable('agent_learnings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  projectId: uuid('project_id').references(() => projects.id),
+  executionId: uuid('execution_id').references(() => agentExecutions.id),
+  learningType: varchar('learning_type', { length: 50 }).notNull(),
+  pattern: text('pattern').notNull(),
+  insight: text('insight').notNull(),
+  successRate: varchar('success_rate', { length: 20 }),
+  applicableContexts: jsonb('applicable_contexts'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Project = typeof projects.$inferSelect;

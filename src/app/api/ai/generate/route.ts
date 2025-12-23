@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getSession } from '@/lib/auth';
 import OpenAI from 'openai';
 import { db } from '@/db';
-import { projects } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { projects, agentMemory, agentExecutions, agentLearnings } from '@/db/schema';
+import { eq, desc } from 'drizzle-orm';
 
 interface FileItem {
   id: string;
@@ -24,6 +23,44 @@ interface ToolResult {
   tool: string;
   success: boolean;
   result: unknown;
+}
+
+interface PlanStep {
+  id: string;
+  description: string;
+  toolsNeeded: string[];
+  dependencies: string[];
+  status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'skipped';
+  outcome?: string;
+  evaluation?: {
+    success: boolean;
+    quality: number;
+    issues: string[];
+    improvements: string[];
+  };
+}
+
+interface ExecutionPlan {
+  goal: string;
+  analysis: string;
+  steps: PlanStep[];
+  estimatedComplexity: 'simple' | 'moderate' | 'complex';
+  proactiveEnhancements: string[];
+}
+
+interface AgentState {
+  phase: 'planning' | 'executing' | 'evaluating' | 'improving' | 'complete';
+  currentStepIndex: number;
+  iterationCount: number;
+  plan: ExecutionPlan | null;
+  executionHistory: Array<{
+    stepId: string;
+    action: string;
+    result: unknown;
+    evaluation: string;
+  }>;
+  learnings: string[];
+  overallProgress: number;
 }
 
 const openai = new OpenAI({
@@ -129,11 +166,38 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'read_file',
+      description: 'Read the contents of a file to understand its current state.',
+      parameters: {
+        type: 'object',
+        properties: {
+          fileId: { type: 'string', description: 'ID of the file to read' },
+        },
+        required: ['fileId'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_files',
+      description: 'List all files in the project to understand the current structure.',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: [],
+      },
+    },
+  },
 ];
 
 async function executeToolCall(
   toolName: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  currentFiles: FileItem[]
 ): Promise<{ success: boolean; result: unknown }> {
   switch (toolName) {
     case 'generate_image': {
@@ -168,7 +232,7 @@ async function executeToolCall(
         result: {
           action: 'create_file',
           file: {
-            id: Date.now().toString(),
+            id: Date.now().toString() + Math.random().toString(36).slice(2),
             name: filename,
             type: 'file',
             path: path === '/' ? `/${filename}` : `${path}/${filename}`,
@@ -235,6 +299,32 @@ async function executeToolCall(
         },
       };
     }
+    case 'read_file': {
+      const file = currentFiles.find(f => f.id === args.fileId);
+      if (file) {
+        return {
+          success: true,
+          result: {
+            action: 'read_file',
+            fileId: args.fileId,
+            filename: file.name,
+            content: file.content,
+            message: `Read file: ${file.name}`,
+          },
+        };
+      }
+      return { success: false, result: { error: 'File not found' } };
+    }
+    case 'list_files': {
+      return {
+        success: true,
+        result: {
+          action: 'list_files',
+          files: currentFiles.map(f => ({ id: f.id, name: f.name, path: f.path, type: f.type })),
+          message: `Listed ${currentFiles.length} files`,
+        },
+      };
+    }
     default:
       return { success: false, result: { error: `Unknown tool: ${toolName}` } };
   }
@@ -258,17 +348,9 @@ function processToolResults(
       case 'create_file': {
         const file = result.file as FileItem;
         const filePath = file.path;
-        
-        // Skip if file already exists in current files
-        if (updatedFiles.some(f => f.path === filePath)) {
+        if (updatedFiles.some(f => f.path === filePath) || createdFilePaths.has(filePath)) {
           break;
         }
-        
-        // Skip if this file was already created in this batch
-        if (createdFilePaths.has(filePath)) {
-          break;
-        }
-        
         createdFilePaths.add(filePath);
         updatedFiles.push(file);
         break;
@@ -304,12 +386,9 @@ function processToolResults(
       }
       case 'generate_image': {
         const imagePath = `/images/${result.filename as string}`;
-        
-        // Skip if image already exists
         if (updatedFiles.some(f => f.path === imagePath)) {
           break;
         }
-        
         generatedImages.push({
           filename: result.filename as string,
           base64Data: result.base64Data as string,
@@ -327,6 +406,110 @@ function processToolResults(
   }
 
   return { files: updatedFiles, packages, terminalOutput, generatedImages };
+}
+
+async function retrieveRelevantMemories(projectId: string): Promise<string[]> {
+  try {
+    const memories = await db.query.agentMemory.findMany({
+      where: eq(agentMemory.projectId, projectId),
+      orderBy: [desc(agentMemory.lastAccessedAt)],
+      limit: 10,
+    });
+    return memories.map(m => `[${m.memoryType}] ${m.content}`);
+  } catch {
+    return [];
+  }
+}
+
+async function retrieveRelevantLearnings(projectId: string): Promise<string[]> {
+  try {
+    const learnings = await db.query.agentLearnings.findMany({
+      where: eq(agentLearnings.projectId, projectId),
+      orderBy: [desc(agentLearnings.createdAt)],
+      limit: 5,
+    });
+    return learnings.map(l => `[${l.learningType}] ${l.pattern}: ${l.insight}`);
+  } catch {
+    return [];
+  }
+}
+
+async function storeMemory(
+  projectId: string,
+  memoryType: string,
+  content: string,
+  metadata?: Record<string, unknown>
+) {
+  try {
+    await db.insert(agentMemory).values({
+      projectId,
+      memoryType,
+      content,
+      metadata,
+      importance: 'medium',
+    });
+  } catch (error) {
+    console.error('Failed to store memory:', error);
+  }
+}
+
+async function storeLearning(
+  projectId: string,
+  executionId: string | null,
+  learningType: string,
+  pattern: string,
+  insight: string
+) {
+  try {
+    await db.insert(agentLearnings).values({
+      projectId,
+      executionId,
+      learningType,
+      pattern,
+      insight,
+    });
+  } catch (error) {
+    console.error('Failed to store learning:', error);
+  }
+}
+
+async function createExecutionRecord(projectId: string, userGoal: string): Promise<string | null> {
+  try {
+    const result = await db.insert(agentExecutions).values({
+      projectId,
+      userGoal,
+      plan: null,
+      executionSteps: [],
+      evaluationResults: null,
+      finalOutcome: 'in_progress',
+    }).returning({ id: agentExecutions.id });
+    return result[0]?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+async function updateExecutionRecord(
+  executionId: string,
+  updates: {
+    plan?: unknown;
+    executionSteps?: unknown;
+    evaluationResults?: unknown;
+    finalOutcome?: string;
+    lessonsLearned?: unknown;
+    totalIterations?: string;
+  }
+) {
+  try {
+    await db.update(agentExecutions)
+      .set({
+        ...updates,
+        completedAt: updates.finalOutcome && updates.finalOutcome !== 'in_progress' ? new Date() : undefined,
+      })
+      .where(eq(agentExecutions.id, executionId));
+  } catch (error) {
+    console.error('Failed to update execution record:', error);
+  }
 }
 
 function compactContext(messages: ChatMessage[], maxMessages: number = 20): ChatMessage[] {
@@ -370,6 +553,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
+    const executionId = projectId ? await createExecutionRecord(projectId, prompt) : null;
+    
+    const memories = projectId ? await retrieveRelevantMemories(projectId) : [];
+    const learnings = projectId ? await retrieveRelevantLearnings(projectId) : [];
+
     const compactedHistory = compactContext(conversationHistory);
     
     const fullFilesContext = files.length > 0 
@@ -380,46 +568,102 @@ export async function POST(request: NextRequest) {
         }).join('\n\n')}`
       : '\n\n## CURRENT PROJECT FILES: None yet - create files to get started!';
 
-    const systemPrompt = `You are hgland Agent, a fully autonomous AI assistant for the hgland website builder platform.
+    const memoryContext = memories.length > 0 
+      ? `\n\n## RELEVANT MEMORIES FROM PAST SESSIONS:\n${memories.join('\n')}`
+      : '';
 
-You have access to powerful tools that let you:
-- Generate images using AI (gpt-image-1 model)
-- Create, edit, and delete files
-- Run terminal commands
-- Install npm packages
+    const learningsContext = learnings.length > 0
+      ? `\n\n## LEARNINGS FROM PAST EXECUTIONS:\n${learnings.join('\n')}`
+      : '';
 
-AUTONOMOUS EXECUTION:
-When a user asks you to build something, autonomously plan and execute all necessary steps using your tools. Don't just describe - actually do it.
+    const autonomousSystemPrompt = `You are hgland Agent, a FULLY AUTONOMOUS AI agent for the hgland website builder platform.
 
-For example, if asked to "build a landing page with a hero image":
-1. Generate an appropriate hero image using generate_image
-2. Create the HTML file with proper structure using create_file
-3. Create CSS styles using create_file
-4. Report what you've done
+## CORE IDENTITY
+You are NOT a reactive chatbot. You are a Level 4 autonomous agent capable of:
+- Strategic planning and goal decomposition
+- Self-directed multi-step execution
+- Outcome evaluation and self-correction
+- Proactive task generation beyond user requests
+- Learning from past experiences
 
-BEST PRACTICES:
-- Use semantic HTML and Tailwind CSS for styling
-- Create responsive, mobile-friendly designs
-- Generate images that match the website's theme
-- Organize files logically
-- Be proactive - if something needs an image, generate it
+## AUTONOMOUS EXECUTION PROTOCOL
 
-CURRENT PROJECT STATE:${fullFilesContext}
+### PHASE 1: STRATEGIC PLANNING
+When receiving a user goal, you MUST:
+1. ANALYZE the goal deeply - understand what the user truly wants, not just what they said
+2. DECOMPOSE into subtasks - break the goal into ordered, actionable steps
+3. IDENTIFY DEPENDENCIES - determine which steps depend on others
+4. PROACTIVELY ENHANCE - identify improvements the user didn't ask for but would benefit from
+5. ESTIMATE COMPLEXITY - simple (1-3 steps), moderate (4-7 steps), complex (8+ steps)
 
-IMPORTANT: When using edit_file or delete_file, use the exact file ID shown above.
+### PHASE 2: ITERATIVE EXECUTION
+For each subtask:
+1. EXECUTE the step using available tools
+2. EVALUATE the outcome - did it achieve what was intended?
+3. SELF-CORRECT if needed - if evaluation fails, try a different approach
+4. ADAPT the plan - based on learnings, adjust remaining steps
 
-Be helpful, creative, and thorough.`;
+### PHASE 3: OUTCOME VERIFICATION
+After completing all steps:
+1. VERIFY the overall goal was achieved
+2. TEST the result mentally - would this work? Is it complete?
+3. IDENTIFY GAPS - what's missing or could be improved?
+4. ITERATE if needed - go back and fix issues
+
+### PHASE 4: PROACTIVE ENHANCEMENT
+Beyond the user's request:
+1. ADD VALUE - include best practices the user didn't ask for
+2. OPTIMIZE - make the code/design better than requested
+3. FUTURE-PROOF - anticipate what they'll need next
+4. DOCUMENT - explain what you did and why
+
+## AVAILABLE TOOLS
+- generate_image: Generate AI images (logos, backgrounds, illustrations)
+- create_file: Create new files with content
+- edit_file: Modify existing files
+- delete_file: Remove files
+- read_file: Read file contents
+- list_files: List project structure
+- run_terminal: Execute commands
+- install_package: Install npm packages
+
+## CURRENT PROJECT STATE
+${fullFilesContext}
+${memoryContext}
+${learningsContext}
+
+## EXECUTION RULES
+1. NEVER just describe what you'll do - ACTUALLY DO IT
+2. Use ALL necessary tools to complete the goal
+3. Create COMPLETE, PRODUCTION-READY code
+4. Use semantic HTML5 and Tailwind CSS
+5. Make designs responsive and accessible
+6. Generate images when visuals would enhance the result
+7. Install packages when needed
+8. Think like a senior developer - consider edge cases
+
+## OUTPUT FORMAT
+After execution, provide:
+1. [PLAN] - Your strategic plan (brief)
+2. [EXECUTED] - What you actually did (list of actions)
+3. [EVALUATION] - Assessment of the outcome
+4. [PROACTIVE] - Additional improvements you made
+5. [NEXT STEPS] - Suggestions for what the user might want next
+
+Remember: You are fully autonomous. Plan extensively. Execute thoroughly. Evaluate critically. Improve proactively.`;
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: autonomousSystemPrompt },
       ...compactedHistory.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-      { role: 'user', content: prompt },
+      { role: 'user', content: `[USER GOAL]: ${prompt}\n\nRemember: You are a fully autonomous agent. Plan this strategically, execute it completely, evaluate the outcome, and proactively add value beyond what was asked.` },
     ];
 
     const toolResults: ToolResult[] = [];
+    const executionSteps: Array<{tool: string; args: unknown; result: unknown; evaluation: string}> = [];
     let finalResponse = '';
     let iterations = 0;
-    const maxIterations = 10;
+    const maxIterations = 15;
+    let currentFiles = [...files];
 
     const responsesTools = tools.map(t => {
       const fn = t.type === 'function' ? t.function : null;
@@ -436,12 +680,15 @@ Be helpful, creative, and thorough.`;
       };
     }).filter(Boolean) as Array<{type: 'function'; name: string; description?: string; parameters: Record<string, unknown>; strict: boolean}>;
 
-    while (iterations < maxIterations) {
+    let evaluationLoop = 0;
+    const maxEvaluationLoops = 3;
+
+    while (iterations < maxIterations && evaluationLoop < maxEvaluationLoops) {
       iterations++;
 
       const response = await openai.responses.create({
         model: 'gpt-5.1-codex-max',
-        instructions: systemPrompt,
+        instructions: autonomousSystemPrompt,
         input: messages.map(m => {
           if (m.role === 'system') return { role: 'user' as const, content: m.content as string };
           if (m.role === 'tool') return { role: 'user' as const, content: `Tool result: ${m.content}` };
@@ -457,7 +704,7 @@ Be helpful, creative, and thorough.`;
         if (item.type === 'function_call') {
           hasToolCalls = true;
           const args = JSON.parse(item.arguments);
-          const result = await executeToolCall(item.name, args);
+          const result = await executeToolCall(item.name, args, currentFiles);
           
           toolResults.push({
             tool: item.name,
@@ -465,9 +712,19 @@ Be helpful, creative, and thorough.`;
             result: result.result,
           });
 
+          executionSteps.push({
+            tool: item.name,
+            args,
+            result: result.result,
+            evaluation: result.success ? 'success' : 'failed',
+          });
+
+          const processedResult = processToolResults([{ tool: item.name, success: result.success, result: result.result }], currentFiles);
+          currentFiles = processedResult.files;
+
           messages.push({
             role: 'assistant',
-            content: `Called ${item.name} with result: ${JSON.stringify(result.result)}`,
+            content: `[TOOL EXECUTED] ${item.name}\nResult: ${JSON.stringify(result.result)}\nSuccess: ${result.success}`,
           });
         } else if (item.type === 'message' && item.content) {
           for (const content of item.content) {
@@ -479,6 +736,17 @@ Be helpful, creative, and thorough.`;
       }
 
       if (!hasToolCalls) {
+        const hasEvaluationMarkers = textContent.includes('[EVALUATION]') || textContent.includes('[EXECUTED]');
+        
+        if (hasEvaluationMarkers && textContent.includes('issue') && evaluationLoop < maxEvaluationLoops - 1) {
+          evaluationLoop++;
+          messages.push({
+            role: 'user',
+            content: '[SELF-CORRECTION TRIGGER] You identified issues in your evaluation. As an autonomous agent, you should now fix those issues. Continue execution to address the problems you found.',
+          });
+          continue;
+        }
+        
         finalResponse = textContent;
         break;
       }
@@ -491,7 +759,7 @@ Be helpful, creative, and thorough.`;
 
     const processedResults = processToolResults(toolResults, files);
 
-    if (toolResults.length > 0 && projectId) {
+    if (projectId) {
       try {
         const updateData: Record<string, unknown> = {
           files: processedResults.files,
@@ -510,6 +778,35 @@ Be helpful, creative, and thorough.`;
         await db.update(projects)
           .set(updateData)
           .where(eq(projects.id, projectId));
+
+        if (toolResults.length > 0) {
+          await storeMemory(
+            projectId,
+            'execution_summary',
+            `Goal: ${prompt}\nActions: ${toolResults.map(t => t.tool).join(', ')}\nFiles modified: ${processedResults.files.length}`,
+            { toolsUsed: toolResults.map(t => t.tool), success: toolResults.every(t => t.success) }
+          );
+        }
+
+        if (executionId) {
+          await updateExecutionRecord(executionId, {
+            plan: { goal: prompt, stepsCount: executionSteps.length },
+            executionSteps,
+            finalOutcome: 'completed',
+            totalIterations: iterations.toString(),
+            lessonsLearned: executionSteps.filter(s => s.evaluation === 'failed').map(s => `${s.tool} failed`),
+          });
+
+          if (executionSteps.some(s => s.evaluation === 'failed')) {
+            await storeLearning(
+              projectId,
+              executionId,
+              'error_pattern',
+              `Failed tools: ${executionSteps.filter(s => s.evaluation === 'failed').map(s => s.tool).join(', ')}`,
+              'Some tools failed during execution - consider alternative approaches'
+            );
+          }
+        }
       } catch (persistError) {
         console.error('Failed to persist project changes:', persistError);
       }
@@ -517,15 +814,25 @@ Be helpful, creative, and thorough.`;
 
     return NextResponse.json({
       success: true,
-      type: 'autonomous',
+      type: 'fully_autonomous',
       message: finalResponse,
       projectId,
+      executionId,
       toolResults,
+      executionSteps,
+      iterations,
       updatedFiles: processedResults.files,
       newPackages: processedResults.packages,
       terminalOutput: processedResults.terminalOutput,
       generatedImages: processedResults.generatedImages,
       contextCompacted: conversationHistory.length > 20,
+      agentMetrics: {
+        totalIterations: iterations,
+        toolsExecuted: toolResults.length,
+        successfulTools: toolResults.filter(t => t.success).length,
+        failedTools: toolResults.filter(t => !t.success).length,
+        evaluationLoops: evaluationLoop,
+      },
     });
   } catch (error: unknown) {
     console.error('AI generation error:', error);
