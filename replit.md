@@ -89,7 +89,7 @@ The UI is styled after **Tidal Wave** - a Geometry Dash Extreme Demon level:
 - New project creation (manual or AI-assisted flow)
 
 ### Project Editor (9 Tabs)
-1. **Code Editor**: File tree with multiple files/folders, code editing with unified preview (all HTML/CSS/JS files rendered together)
+1. **Code Editor**: Monaco Editor with syntax highlighting, IntelliSense, 40+ language support, 1-second debounced auto-save, WebContainer backend preview with Run/Stop controls
 2. **Visual Editor**: Component palette (drag-and-drop coming soon)
 3. **AI Assistant**: Chat with GPT-5.1 Codex Max, conversation history saves
 4. **Languages**: 30+ programming language selections for code generation
