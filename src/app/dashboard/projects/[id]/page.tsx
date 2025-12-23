@@ -46,6 +46,9 @@ interface ResourceConfig {
   gpu: boolean;
   gpuType: string;
   disk: number;
+  plan: string;
+  status: 'idle' | 'provisioning' | 'active' | 'scaling';
+  allocatedAt?: string;
 }
 
 interface IntegrationItem {
@@ -77,12 +80,42 @@ interface ChatMessage {
 
 type EditorTab = 'visual' | 'code' | 'ai' | 'languages' | 'packages' | 'terminal' | 'seo' | 'resources' | 'deployment' | 'integrations';
 
+const hgPlans = [
+  { id: 'A', name: 'Plan A', ram: 8, cpu: 1, disk: 50, gpu: false, gpuType: '', price: 0 },
+  { id: 'B', name: 'Plan B', ram: 16, cpu: 2, disk: 100, gpu: false, gpuType: '', price: 5 },
+  { id: 'C', name: 'Plan C', ram: 32, cpu: 4, disk: 250, gpu: false, gpuType: '', price: 15 },
+  { id: 'D', name: 'Plan D', ram: 64, cpu: 8, disk: 500, gpu: false, gpuType: '', price: 35 },
+  { id: 'E', name: 'Plan E', ram: 128, cpu: 16, disk: 1024, gpu: false, gpuType: '', price: 75 },
+  { id: 'F', name: 'Plan F', ram: 256, cpu: 32, disk: 2048, gpu: false, gpuType: '', price: 150 },
+  { id: 'G', name: 'Plan G', ram: 512, cpu: 48, disk: 4096, gpu: false, gpuType: '', price: 300 },
+  { id: 'H', name: 'Plan H', ram: 1024, cpu: 64, disk: 8192, gpu: false, gpuType: '', price: 600 },
+  { id: 'J', name: 'Plan J', ram: 2048, cpu: 96, disk: 16384, gpu: false, gpuType: '', price: 1200 },
+  { id: 'K', name: 'Plan K', ram: 4096, cpu: 128, disk: 32768, gpu: false, gpuType: '', price: 2400 },
+  { id: 'L', name: 'Plan L', ram: 8, cpu: 2, disk: 100, gpu: true, gpuType: 'NVIDIA T4', price: 25 },
+  { id: 'M', name: 'Plan M', ram: 32, cpu: 8, disk: 500, gpu: true, gpuType: 'NVIDIA T4', price: 75 },
+  { id: 'N', name: 'Plan N', ram: 64, cpu: 16, disk: 1024, gpu: true, gpuType: 'NVIDIA RTX 4090', price: 200 },
+  { id: 'O', name: 'Plan O', ram: 128, cpu: 32, disk: 2048, gpu: true, gpuType: 'NVIDIA RTX 4090', price: 400 },
+  { id: 'P', name: 'Plan P', ram: 256, cpu: 48, disk: 4096, gpu: true, gpuType: 'NVIDIA A100', price: 800 },
+  { id: 'Q', name: 'Plan Q', ram: 512, cpu: 64, disk: 8192, gpu: true, gpuType: 'NVIDIA A100', price: 1500 },
+  { id: 'R', name: 'Plan R', ram: 1024, cpu: 96, disk: 16384, gpu: true, gpuType: 'NVIDIA H100', price: 3000 },
+  { id: 'S', name: 'Plan S', ram: 2048, cpu: 128, disk: 32768, gpu: true, gpuType: 'NVIDIA H100', price: 6000 },
+  { id: 'T', name: 'Plan T', ram: 4096, cpu: 128, disk: 65536, gpu: true, gpuType: 'NVIDIA H100', price: 12000 },
+  { id: 'U', name: 'Plan U', ram: 4096, cpu: 128, disk: 131072, gpu: true, gpuType: 'NVIDIA H100 x2', price: 20000 },
+  { id: 'V', name: 'Plan V', ram: 4096, cpu: 128, disk: 262144, gpu: true, gpuType: 'NVIDIA H100 x4', price: 35000 },
+  { id: 'W', name: 'Plan W', ram: 4096, cpu: 128, disk: 524288, gpu: true, gpuType: 'NVIDIA H100 x8', price: 60000 },
+  { id: 'X', name: 'Plan X', ram: 4096, cpu: 128, disk: 1048576, gpu: true, gpuType: 'NVIDIA H100 x16', price: 100000 },
+  { id: 'Y', name: 'Plan Y', ram: 4096, cpu: 128, disk: 2097152, gpu: true, gpuType: 'NVIDIA H100 x32', price: 175000 },
+  { id: 'Z', name: 'Plan Z', ram: 4096, cpu: 128, disk: 4096000, gpu: true, gpuType: 'NVIDIA H100 x64', price: 300000 },
+];
+
 const defaultResources: ResourceConfig = {
-  ram: 128,
-  cpu: 8,
-  gpu: true,
-  gpuType: 'NVIDIA A100',
-  disk: 500,
+  ram: 8,
+  cpu: 1,
+  gpu: false,
+  gpuType: '',
+  disk: 50,
+  plan: 'A',
+  status: 'idle',
   cloudProvider: 'none',
   cloudCredentials: {}
 };
