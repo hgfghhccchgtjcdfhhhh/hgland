@@ -1055,12 +1055,12 @@ export default function ProjectEditorPage({ params }: { params: Promise<{ id: st
                 <h3 className="text-lg font-medium text-cyan-300 mb-4">Resource Configuration</h3>
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-cyan-200 mb-2">RAM: {resources.ram} GB</label>
-                    <input type="range" min="8" max="512" step="8" value={resources.ram} onChange={(e) => {
+                    <label className="block text-sm font-medium text-cyan-200 mb-2">RAM: {resources.ram >= 1024 ? (resources.ram / 1024).toFixed(1) + ' TB' : resources.ram + ' GB'}</label>
+                    <input type="range" min="8" max="4096" step="8" value={resources.ram} onChange={(e) => {
                       const updated = {...resources, ram: parseInt(e.target.value)};
                       setResources(updated);
                     }} onMouseUp={() => saveProjectData({ resources })} className="w-full accent-cyan-500" />
-                    <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>8 GB</span><span>512 GB</span></div>
+                    <div className="flex justify-between text-xs text-cyan-400 mt-1"><span>8 GB</span><span>4 TB</span></div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-cyan-200 mb-2">CPU Cores: {resources.cpu}</label>
